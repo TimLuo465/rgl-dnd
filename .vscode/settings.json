@@ -1,0 +1,42 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/build": true,
+    "**/public": true,
+    "**/__snapshots__": true,
+    ".git": true,
+    "**/.DS_Store": true,
+    "dist": true,
+    ".eslintcache": true,
+    ".gitignore": true,
+    "yarn-error.log": true,
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/build": true,
+  },
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  // Turn off tsc task auto detection since we have the necessary tasks as npm scripts
+  "typescript.tsc.autoDetect": "off",
+  "editor.codeActionsOnSave": {
+    "source.fixAll": true,
+  },
+  "editor.formatOnSave": true,
+  "[typescript]": {
+    "editor.codeActionsOnSave": {
+      "source.fixAll": true,
+      "source.organizeImports": true
+    },
+  },
+  "[typescriptreact]": {
+    "editor.codeActionsOnSave": {
+      "source.fixAll": true,
+      "source.organizeImports": true
+    }
+  },
+  "json.schemaDownload.enable": false,
+}
