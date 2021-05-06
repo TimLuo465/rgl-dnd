@@ -2,6 +2,7 @@ import React, { isValidElement, memo, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
 import { DEFAULT_ITEMTYPE } from '../constants';
 import { DraggableProps, DragItem } from '../types';
+import event from './event';
 
 const Draggable: React.FC<DraggableProps> = memo((props: DraggableProps) => {
   const {
@@ -19,8 +20,11 @@ const Draggable: React.FC<DraggableProps> = memo((props: DraggableProps) => {
       item: data,
       canDrag: draggable,
       end(draggedItem: DragItem, monitor) {
-        console.log('end----');
-        onDragEnd?.(draggedItem, monitor.didDrop());
+        const didDrop = monitor.didDrop();
+        const itemType = monitor.getItemType() as string;
+
+        event.emit('dragEnd.cardItem', draggedItem, didDrop, itemType);
+        onDragEnd?.(draggedItem, didDrop, itemType);
       },
       collect: (monitor) => ({
         isDragging: monitor.isDragging(),
@@ -30,12 +34,13 @@ const Draggable: React.FC<DraggableProps> = memo((props: DraggableProps) => {
     }),
     [type, data, draggable, onDragEnd]
   );
+  const { isDragging } = collected;
 
   useEffect(() => {
-    if (collected.isDragging) {
+    if (isDragging) {
       onDragStart?.(collected.item);
     }
-  }, [collected.isDragging]);
+  }, [isDragging]);
 
   if (typeof children === 'string') {
     return (

@@ -4,7 +4,6 @@ import { ResizeHandle } from 'react-resizable';
 
 export interface DragItem {
   i: string;
-  group?: string;
   static?: boolean;
   [key: string]: any;
 }
@@ -16,7 +15,6 @@ export interface LayoutItem extends DragItem {
   w: number;
   h: number;
   placeholder?: boolean;
-  group?: string;
 }
 
 export interface DroppingItem {
@@ -28,9 +26,8 @@ export interface DroppingItem {
 export interface DroppableProps {
   group?: string;
   accept?: string[];
-  onDrop?: (item: unknown) => void;
-  onHover?: (item: unknown, offset: XYCoord) => void;
-  onEnter?: (item: unknown, offset: XYCoord) => void;
+  onDrop?: (item: unknown, itemType: string) => void;
+  onHover?: (item: unknown, offset: XYCoord, itemType: string) => void;
   children?: ReactNode;
 }
 
@@ -39,6 +36,7 @@ export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
   layouts: LayoutItem[];
   margin?: [number, number];
   containerPadding?: [number, number];
+  className?: string;
   cols?: number;
   resizeHandles?: ResizeHandle[];
   rowHeight?: number;
@@ -73,7 +71,7 @@ export interface DraggableProps {
   style?: CSSProperties;
   children?: ReactNode;
   draggable?: boolean;
-  onDragEnd?: (draggedItem: DragItem, didDrop: boolean) => void;
+  onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;
   onDragStart?: (draggedItem: DragItem) => void;
 }
 
@@ -103,3 +101,5 @@ export type ItemStates = {
 };
 
 export type CompactType = 'horizontal' | 'vertical';
+
+export type InternalEventType = 'mounted';

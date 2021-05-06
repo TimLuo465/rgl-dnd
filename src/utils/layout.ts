@@ -1,3 +1,4 @@
+import lodashEqual from 'lodash.isequal';
 import { CompactType, DragItem, LayoutItem, PositionParams } from '../types';
 
 /**
@@ -10,7 +11,7 @@ export function bottom(layouts: LayoutItem[]): number {
   let max = 0;
   let bottomY: number;
 
-  layouts.forEach((l, index) => {
+  layouts.forEach((l) => {
     bottomY = l.y + l.h;
 
     if (bottomY > max) {
@@ -47,7 +48,7 @@ export function getLayoutItem(layouts: LayoutItem[], i: string): LayoutItem | nu
  * Does not modify Layout.
  */
 export function sortLayoutItemsByColRow(layout: LayoutItem[]): LayoutItem[] {
-  return layout.slice(0).sort(function (a, b) {
+  return layout.slice(0).sort(function sort(a, b) {
     if (a.x > b.x || (a.x === b.x && a.y > b.y)) {
       return 1;
     }
@@ -62,7 +63,7 @@ export function sortLayoutItemsByColRow(layout: LayoutItem[]): LayoutItem[] {
  */
 export function sortLayoutItemsByRowCol(layout: LayoutItem[]): LayoutItem[] {
   // Slice to clone array as sort modifies
-  return layout.slice(0).sort(function (a, b) {
+  return layout.slice(0).sort(function sort(a, b) {
     if (a.y > b.y || (a.y === b.y && a.x > b.x)) {
       return 1;
     } else if (a.y === b.y && a.x === b.x) {
@@ -499,4 +500,19 @@ export function withLayoutItem(
   // FIXME could do this faster if we already knew the index
   layouts = modifyLayout(layouts, item);
   return [layouts, item];
+}
+
+export function pickLayoutItem({ i, x, y, h, w, group }: LayoutItem) {
+  return { i, x, y, h, w, group };
+}
+
+export function isEqual(layouts1: LayoutItem[], layouts2: LayoutItem[]) {
+  const s1 = layouts1.map(pickLayoutItem);
+  const s2 = layouts2.map(pickLayoutItem);
+
+  return lodashEqual(s1, s2);
+}
+
+export function cloneLayouts(layouts: LayoutItem[]) {
+  return JSON.parse(JSON.stringify(layouts));
 }

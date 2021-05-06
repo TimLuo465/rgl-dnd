@@ -1,6 +1,6 @@
 import React, { memo, SyntheticEvent, useState } from 'react';
 import { ResizableBox, ResizeCallbackData } from 'react-resizable';
-import { DEFAULT_GROUP, prefixCls } from '../constants';
+import { prefixCls } from '../constants';
 import { ItemProps, ItemStates, Size } from '../types';
 import { calcGridItemPosition, calcWH, clamp, setTransform } from '../utils';
 import Draggable from './Draggable';
@@ -45,11 +45,12 @@ const Item: React.FC<ItemProps> = memo((props: ItemProps) => {
   const [resizing, setResizing] = useState<Size>(null);
   const state = { resizing };
   const position = getPosition(props, state);
+  // ResizableBox types definition has no style, but mention in doc
   const _style: any = { style: { ...style, ...position, ...resizing } };
   const handleResize = (
     e: SyntheticEvent,
     callbackData: ResizeCallbackData,
-    type: ResizeEventType
+    evtType: ResizeEventType
   ) => {
     const { size } = callbackData;
     let { w, h } = calcWH(getPositionParams(props), size.width, size.height, data.x, data.y);
@@ -59,8 +60,8 @@ const Item: React.FC<ItemProps> = memo((props: ItemProps) => {
     w = clamp(w, _minW, _maxW);
     h = clamp(h, minH, maxH);
 
-    setResizing(type === 'onResizeStop' ? null : size);
-    props[type]?.(data, w, h);
+    setResizing(evtType === 'onResizeStop' ? null : size);
+    props[evtType]?.(data, w, h);
   };
   const onResize = (e: SyntheticEvent, callbackData: ResizeCallbackData) => {
     handleResize(e, callbackData, 'onResize');
@@ -69,12 +70,7 @@ const Item: React.FC<ItemProps> = memo((props: ItemProps) => {
     handleResize(e, callbackData, 'onResizeStop');
   };
 
-  if (!('group' in data) && type !== DEFAULT_GROUP) {
-    data.group = type;
-  }
-
   return (
-    // <div style={{ ...style, ...position }}>
     <ResizableBox
       {..._style}
       width={position.width}
@@ -95,7 +91,6 @@ const Item: React.FC<ItemProps> = memo((props: ItemProps) => {
         {children}
       </Draggable>
     </ResizableBox>
-    // </div>
   );
 });
 

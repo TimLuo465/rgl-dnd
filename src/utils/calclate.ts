@@ -40,6 +40,7 @@ export function calcGridItemPosition(
 ): Position {
   const { margin, containerPadding, rowHeight } = positionParams;
   const colWidth = calcGridColWidth(positionParams);
+
   const out = {} as Position;
 
   // If resizing, use the exact width and height as returned from resizing callbacks.

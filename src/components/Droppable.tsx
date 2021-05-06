@@ -3,22 +3,22 @@ import { useDrop } from 'react-dnd';
 import { DroppableProps } from '../types';
 
 const Droppable: React.FC<DroppableProps> = (props) => {
-  const { accept, children, onDrop, onHover, onEnter } = props;
+  const { accept, children, onDrop, onHover } = props;
   const [, connect] = useDrop(
     () => ({
       accept,
       drop(_item: unknown, monitor) {
         const item = monitor.getItem();
+        const itemType = monitor.getItemType() as string;
 
-        onDrop?.(item);
+        onDrop?.(item, itemType);
       },
       hover: (item, monitor) => {
         const offset = monitor.getSourceClientOffset();
+        const itemType = monitor.getItemType() as string;
 
         if (monitor.isOver({ shallow: true })) {
-          onHover?.(item, offset);
-        } else {
-          onEnter?.(item, offset);
+          onHover?.(item, offset, itemType);
         }
       },
     }),

@@ -6,6 +6,7 @@ import postcss from 'rollup-plugin-postcss'
 import svgr from '@svgr/rollup'
 import url from '@rollup/plugin-url'
 import analyze from 'rollup-plugin-analyzer'
+import { terser } from 'rollup-plugin-terser';
 
 const packageJson = require('./package.json')
 
@@ -17,17 +18,24 @@ export default {
       file: packageJson.main,
       format: 'cjs',
       sourcemap: true,
+      plugins: [
+        terser()
+      ]
     },
     {
       exports: 'named',
       file: packageJson.module,
       format: 'esm',
       sourcemap: true,
+      plugins: [
+        terser()
+      ]
     },
     {
-      name: 'ReactLibraryStarter',
+      name: 'RGLDND',
       file: packageJson.unpkg,
       format: 'umd',
+      plugins: [terser()],
       globals: {
         react: 'React',
       },
