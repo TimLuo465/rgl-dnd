@@ -152,14 +152,6 @@ export const Default: React.FC = () => {
   const renderItem = (item) => {
     return <div>{item.i.substring(1, 5)}</div>;
   };
-  const onDrop = (_layouts, layoutItem, fromGroup) => {
-    _layouts.push(layoutItem);
-    setLayouts(_layouts);
-  };
-  const onDrop2 = (_layouts, layoutItem) => {
-    _layouts.push(layoutItem);
-    setLayouts2(_layouts);
-  };
   const onClick = () => {
     setLayouts2(
       layouts2.map((l) => {
@@ -184,34 +176,53 @@ export const Default: React.FC = () => {
         <div>Box1</div>
       </Draggable>
       <Draggable data={{ i: new Date().getTime().toString() }}>Box2</Draggable>
-      <button onClick={onClick}>change Layout</button>
-      <Layout
-        style={{ border: '1px solid #000', height: 200, overflow: 'auto' }}
-        layouts={layouts}
-        droppingItem={droppingItem}
-        rowHeight={1}
-        cols={12}
-        ref={ref1}
-        renderItem={renderItem}
-        onDrop={onDrop}
-        onLayoutChange={(layouts) => {
-          console.log('change');
-          setLayouts(layouts);
+      <div style={{ marginBottom: 20 }}>
+        <button onClick={onClick}>change Layout</button>
+      </div>
+      <div
+        style={{
+          float: 'left',
+          width: '49%',
+          border: '1px solid #000',
+          height: 200,
+          overflow: 'auto',
         }}
-      />
-      <Layout
-        style={{ border: '1px solid #000' }}
-        droppingItem={droppingItem}
-        layouts={layouts2}
-        renderItem={renderItem}
-        rowHeight={1}
-        cols={12}
-        onDrop={onDrop2}
-        onLayoutChange={(layouts) => {
-          console.log('change2');
-          setLayouts2(layouts);
+      >
+        <Layout
+          layouts={layouts}
+          droppingItem={droppingItem}
+          rowHeight={1}
+          cols={12}
+          ref={ref1}
+          renderItem={renderItem}
+          onLayoutChange={(layouts) => {
+            console.log('change');
+            setLayouts(layouts);
+          }}
+        />
+      </div>
+      <div
+        style={{
+          float: 'left',
+          width: '49%',
+          border: '1px solid #000',
+          height: 200,
+          overflow: 'auto',
         }}
-      />
+      >
+        <Layout
+          style={{ border: '1px solid #000' }}
+          droppingItem={droppingItem}
+          layouts={layouts2}
+          renderItem={renderItem}
+          rowHeight={1}
+          cols={12}
+          onLayoutChange={(layouts) => {
+            console.log('change2');
+            setLayouts2(layouts);
+          }}
+        />
+      </div>
     </Provider>
   );
 };

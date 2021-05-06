@@ -46,7 +46,7 @@ export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
   compactType?: CompactType;
   renderItem: (item: LayoutItem) => ReactNode;
   onLayoutChange?: (layouts: LayoutItem[]) => void;
-  onDrop?: (layouts: LayoutItem[], droppedItem: LayoutItem, fromGroup: string) => void;
+  onDrop?: (layouts: LayoutItem[], droppedItem: LayoutItem) => void;
 }
 
 export type PositionParams = {

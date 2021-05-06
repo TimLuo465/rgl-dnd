@@ -226,8 +226,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   calcXY(item: LayoutItem, offset: XYCoord) {
     const positionParams = this.getPositionParams();
     const { offset: parentOffset } = this.state;
-    const { scrollTop, scrollLeft } = this.containerRef.current;
-    const x = offset.x + scrollLeft;
+    const { scrollTop, scrollLeft } = this.containerRef.current.parentElement;
+    const x = offset.x - parentOffset.x + scrollLeft;
     const y = offset.y - parentOffset.y + scrollTop;
 
     return calcXY(positionParams, y, x, item.w, item.h);
@@ -320,11 +320,12 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     this.moveItem(layoutItem, offset);
   }
 
-  onDrop = () => {
-    const { draggingItem } = this.state;
-    const { layouts, oldLayouts } = this.state;
+  onDrop = (dragItem: DragItem) => {
+    const { draggingItem, layouts, oldLayouts } = this.state;
 
     this.onLayoutMaybeChanged(layouts, oldLayouts);
+    console.log(draggingItem, dragItem);
+    this.props.onDrop?.(layouts, draggingItem);
     this.resetDraggingState(draggingItem.i);
   };
 
