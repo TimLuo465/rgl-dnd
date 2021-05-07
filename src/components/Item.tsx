@@ -5,7 +5,7 @@ import { ItemProps, ItemStates, Size } from '../types';
 import { calcGridItemPosition, calcWH, clamp, setTransform } from '../utils';
 import Draggable from './Draggable';
 
-type ResizeEventType = 'onResize' | 'onResizeStop';
+type ResizeEventType = 'onResizeStart' | 'onResize' | 'onResizeStop';
 
 const getPositionParams = (props: ItemProps) => {
   const { margin, containerPadding, cols, containerWidth, rowHeight, maxRows } = props;
@@ -60,8 +60,14 @@ const Item: React.FC<ItemProps> = memo((props: ItemProps) => {
     w = clamp(w, _minW, _maxW);
     h = clamp(h, minH, maxH);
 
+    e.preventDefault();
+    e.stopPropagation();
+
     setResizing(evtType === 'onResizeStop' ? null : size);
     props[evtType]?.(data, w, h);
+  };
+  const onResizeStart = (e: SyntheticEvent, callbackData: ResizeCallbackData) => {
+    handleResize(e, callbackData, 'onResizeStart');
   };
   const onResize = (e: SyntheticEvent, callbackData: ResizeCallbackData) => {
     handleResize(e, callbackData, 'onResize');
@@ -75,7 +81,7 @@ const Item: React.FC<ItemProps> = memo((props: ItemProps) => {
       {..._style}
       width={position.width}
       height={position.height}
-      onResizeStart={onResize}
+      onResizeStart={onResizeStart}
       onResize={onResize}
       onResizeStop={onResizeStop}
       resizeHandles={resizeHandles}

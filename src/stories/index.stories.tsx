@@ -144,13 +144,75 @@ export const Default: React.FC = () => {
     { i: '3', x: 0, y: 0, w: 1, h: 20 },
     { i: '4', x: 1, y: 1, w: 1, h: 20 },
   ]);
+  const [layouts3, setLayouts3] = useState<LayoutItem[]>([]);
   const droppingItem = {
     i: new Date().getTime().toString(),
     w: 1,
     h: 10,
   };
-  const renderItem = (item) => {
-    return <div>{item.i.substring(1, 5)}</div>;
+  const deleteItem1 = (i) => {
+    const index = layouts.findIndex((l) => l.i === i);
+
+    layouts.splice(index, 1);
+    setLayouts(layouts);
+  };
+  const deleteItem2 = (i) => {
+    const index = layouts2.findIndex((l) => l.i === i);
+
+    layouts2.splice(index, 1);
+    setLayouts2(layouts2.slice());
+  };
+  const renderItem1 = (item) => {
+    return (
+      <div>
+        {item.i.substring(1, 5)}
+        <button onClick={() => deleteItem1(item.i)}>delete</button>
+      </div>
+    );
+  };
+  const onDrop1 = (_layouts, layoutItem, dragInfo, group) => {
+    if (dragInfo.type !== group) {
+      layouts.push(layoutItem);
+      setLayouts(layouts.slice());
+    }
+  };
+  const onDrop2 = (_layouts, layoutItem, dragInfo, group) => {
+    if (dragInfo.type !== group) {
+      layouts2.push(layoutItem);
+      setLayouts2(layouts2.slice());
+    }
+  };
+  const onDrop3 = (_layouts, layoutItem, dragInfo, group) => {
+    if (dragInfo.type !== group) {
+      layouts3.push(layoutItem);
+      setLayouts3(layouts3.slice());
+    }
+  };
+  const renderItem2 = (item) => {
+    if (item.i === '3') {
+      return (
+        <div>
+          <Layout
+            nested={true}
+            rowHeight={1}
+            layouts={layouts3}
+            style={{ minHeight: '100%' }}
+            droppable={layouts3.length < 1}
+            droppingItem={{ ...droppingItem, w: 12, h: 5 }}
+            renderItem={(item) => <div>{item.i}</div>}
+            onDrop={onDrop3}
+            onLayoutChange={setLayouts3}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div>
+        {item.i.substring(1, 5)}
+        <button onClick={() => deleteItem2(item.i)}>delete</button>
+      </div>
+    );
   };
   const onClick = () => {
     setLayouts2(
@@ -165,7 +227,7 @@ export const Default: React.FC = () => {
   useEffect(() => {
     ref1.current.resize();
   }, []);
-
+  console.log(droppingItem);
   return (
     <Provider>
       <Draggable
@@ -194,7 +256,8 @@ export const Default: React.FC = () => {
           rowHeight={1}
           cols={12}
           ref={ref1}
-          renderItem={renderItem}
+          onDrop={onDrop1}
+          renderItem={renderItem1}
           onLayoutChange={(layouts) => {
             console.log('change');
             setLayouts(layouts);
@@ -214,11 +277,12 @@ export const Default: React.FC = () => {
           style={{ border: '1px solid #000' }}
           droppingItem={droppingItem}
           layouts={layouts2}
-          renderItem={renderItem}
+          renderItem={renderItem2}
           rowHeight={1}
           cols={12}
+          onDrop={onDrop2}
           onLayoutChange={(layouts) => {
-            console.log('change2');
+            console.log('change2: ', layouts);
             setLayouts2(layouts);
           }}
         />

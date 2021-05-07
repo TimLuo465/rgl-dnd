@@ -111,14 +111,43 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     };
   }
 
+  static getDerivedStateFromProps(props, prevState: LayoutStates) {
+    // hoveredGroups.length - dragging
+    // prevState.oldLayouts - dragging or resizing
+    // skip to update layouts when dragging or resizing
+    if (hoveredGroups.length || prevState.oldLayouts) {
+      return null;
+    }
+
+    const { layouts, cols, compactType } = props;
+    const { layouts: _layouts } = prevState;
+
+    if (!isEqual(layouts, _layouts)) {
+      return {
+        layouts: reLayout(layouts, compactType, cols),
+      };
+    }
+    return null;
+  }
+
   componentDidMount() {
     const containerDOM = this.containerRef.current;
+    const initStates = () => {
+      if (containerDOM) {
+        this.setState({
+          offset: containerDOM.getBoundingClientRect(),
+          containerWidth: containerDOM.offsetWidth,
+        });
+      }
+    };
 
-    if (containerDOM) {
-      this.setState({
-        offset: containerDOM.getBoundingClientRect(),
-        containerWidth: containerDOM.offsetWidth,
-      });
+    if (this.props.nested) {
+      // hack code for nested layout
+      setTimeout(() => {
+        initStates();
+      }, 50);
+    } else {
+      initStates();
     }
 
     window.addEventListener('resize', this.resize);
@@ -141,7 +170,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     const equal = isEqual(oldLayouts, newLayouts);
 
     if (!equal) {
-      this.props.onLayoutChange?.(newLayouts);
+      this.props.onLayoutChange?.(cloneLayouts(newLayouts));
     }
 
     return equal;
@@ -157,6 +186,12 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     }
   };
 
+  getWidth() {
+    const containerDOM = this.containerRef.current;
+
+    return containerDOM?.offsetWidth || 0;
+  }
+
   isGroupItem(itemType: string): boolean {
     return itemType === this.group || !!groupLayouts[itemType];
   }
@@ -167,13 +202,15 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     callback?: (layout: Layout) => void
   ) => {
     const layout = groupLayouts[group];
+
+    if (!layout) return;
+
     const { layouts } = layout.state;
     const { compactType, cols } = layout.props;
+
     const index = layouts.findIndex((l) => l.i === layoutItem.i);
 
-    if (index === -1) {
-      return;
-    }
+    if (index === -1) return;
 
     if (callback) {
       callback(layout);
@@ -191,15 +228,17 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     if (hoveredGroups.length > 1) {
       hoveredGroups.forEach((group) => {
         if (group !== this.group) {
-          this.removeOtherGroupItem(layoutItem, group, (layout) => {
-            layout.setState({
-              layouts: cloneLayouts(layout.state.oldLayouts),
-              prevPosition: null,
-              draggingItem: null,
-            });
-          });
+          this.removeOtherGroupItem(layoutItem, group);
+          // this.removeOtherGroupItem(layoutItem, group, (layout) => {
+          //   layout.setState({
+          //     layouts: cloneLayouts(layout.state.oldLayouts),
+          //     prevPosition: null,
+          //     draggingItem: null,
+          //   });
+          // });
         }
       });
+      hoveredGroups = [this.group];
     }
   };
 
@@ -212,7 +251,9 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       });
     }
 
-    hoveredGroups.push(this.group);
+    if (hoveredGroups.indexOf(this.group) === -1) {
+      hoveredGroups.push(this.group);
+    }
 
     // move group item
     if (this.isGroupItem(itemType)) {
@@ -280,14 +321,15 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
         ..._item,
         ...this.calcXY(_item, offset),
       };
-
       layouts.push(layoutItem);
     } else {
       layoutItem = getLayoutItem(layouts, draggingItem.i);
     }
 
-    this.removeHoverdGroupItem(layoutItem);
-    this.moveItem(layoutItem, offset);
+    if (layoutItem) {
+      this.removeHoverdGroupItem(layoutItem);
+      this.moveItem(layoutItem, offset);
+    }
   }
 
   /**
@@ -298,7 +340,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     const group = this.group;
     const { layouts, oldLayouts } = this.state;
     let layoutItem = getLayoutItem(layouts, item.i);
-
     // drag group item to other group
     if (!layoutItem) {
       if (itemType !== group) {
@@ -307,6 +348,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
           placeholder: true,
           group,
         };
+
         // remove same item in other group layout
         this.removeOtherGroupItem(layoutItem, itemType);
       } else {
@@ -320,13 +362,36 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     this.moveItem(layoutItem, offset);
   }
 
-  onDrop = (dragItem: DragItem) => {
+  onDrop = (dragItem: DragItem, itemType: string) => {
     const { draggingItem, layouts, oldLayouts } = this.state;
 
-    this.onLayoutMaybeChanged(layouts, oldLayouts);
-    console.log(draggingItem, dragItem);
-    this.props.onDrop?.(layouts, draggingItem);
     this.resetDraggingState(draggingItem.i);
+
+    // group layout change
+    if (itemType === this.group) {
+      this.onLayoutMaybeChanged(layouts, oldLayouts);
+    } else {
+      // new card item or other group item
+      const index = layouts.findIndex((l) => l.i === draggingItem.i);
+      const sourceLayout = groupLayouts[itemType];
+
+      delete draggingItem.placeholder;
+
+      // remove dragitem from layout
+      // use ondrop to custom handle layouts change when drag new item
+      if (index > -1) {
+        layouts.splice(index, 1);
+      }
+
+      // item from other layout
+      if (sourceLayout) {
+        const { layouts: sourceLayouts, oldLayouts: sourceOldLayouts } = sourceLayout.state;
+        // trigger change for the moved dragitem
+        sourceLayout.onLayoutMaybeChanged(sourceLayouts, sourceOldLayouts);
+      }
+    }
+
+    this.props.onDrop?.(layouts, draggingItem, { item: dragItem, type: itemType }, this.group);
   };
 
   onDragStart = () => {
@@ -368,24 +433,30 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     });
   }
 
-  onCardItemDragEnd = (item: DragItem, didDrop: boolean) => {
+  onCardItemDragEnd = (item: DragItem, didDrop: boolean, itemType: string) => {
     const { layouts, oldLayouts, draggingItem } = this.state;
 
-    // handle by onDrop
-    if (didDrop || !draggingItem) {
+    if (!draggingItem) {
       return;
     }
 
-    const index = layouts.findIndex((l) => l.i === draggingItem.i);
+    // did not drop on layout
+    if (!didDrop) {
+      const index = layouts.findIndex((l) => l.i === draggingItem.i);
 
-    if (index > -1) {
-      layouts.splice(index, 1);
+      if (index > -1) {
+        layouts.splice(index, 1);
 
-      this.setState({
-        draggingItem: null,
-        prevPosition: null,
-        layouts: cloneLayouts(oldLayouts),
-      });
+        this.setState({
+          draggingItem: null,
+          prevPosition: null,
+          layouts: cloneLayouts(oldLayouts),
+        });
+      }
+    } else {
+      // drop on layout, but not emit onDrop
+      // maybe nested layout, so trigger onDrop manual
+      this.onDrop(item, itemType);
     }
   };
 
@@ -445,16 +516,18 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   };
 
   onResizeStop = () => {
-    const { layouts } = this.state;
+    const { layouts, oldLayouts } = this.state;
     const { cols, compactType } = this.props;
     const newLayouts = compact(layouts, compactType, cols);
 
-    this.setState({ placeholder: null });
-    this.onLayoutMaybeChanged(newLayouts);
+    this.setState({
+      placeholder: null,
+      oldLayouts: null,
+    });
+    this.onLayoutMaybeChanged(newLayouts, oldLayouts);
   };
 
   getPositionParams = () => {
-    const { containerWidth } = this.state;
     const { cols, margin, maxRows, rowHeight, containerPadding } = this.props;
 
     return {
@@ -462,7 +535,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       margin,
       maxRows,
       rowHeight,
-      containerWidth,
+      containerWidth: this.getWidth(),
       containerPadding,
     };
   };
@@ -495,6 +568,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
         resizeHandles={resizeHandles}
         onDragEnd={this.onDragEnd}
         onDragStart={this.onDragStart}
+        onResizeStart={this.onDragStart}
         onResize={this.onResize}
         onResizeStop={this.onResizeStop}
       >
@@ -505,7 +579,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
   render() {
     const { layouts, accept, placeholder } = this.state;
-    const { style, margin, rowHeight, containerPadding, className } = this.props;
+    const { style, margin, rowHeight, containerPadding, droppable, className } = this.props;
     const clsNameStr = `${prefixCls} ${className}`.trim();
     const containerStyle: CSSProperties = {
       height: getContainerHeight(layouts, {
@@ -517,7 +591,13 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     };
 
     return (
-      <Droppable group={this.group} accept={accept} onDrop={this.onDrop} onHover={this.hover}>
+      <Droppable
+        group={this.group}
+        accept={accept}
+        canDrop={droppable}
+        onDrop={this.onDrop}
+        onHover={this.hover}
+      >
         <div ref={this.containerRef} className={clsNameStr} style={containerStyle}>
           {this.renderPlaceholder(placeholder)}
           {layouts.map(this.renderItem)}
@@ -532,6 +612,7 @@ Layout.defaultProps = {
   accept: [],
   group: '',
   className: '',
+  droppable: true,
   cols: DEFAULT_COLS,
   margin: DEFAULT_MARGIN,
   containerPadding: DEFAULT_CONTAINER_PADDING,

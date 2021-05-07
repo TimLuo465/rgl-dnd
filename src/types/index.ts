@@ -26,15 +26,23 @@ export interface DroppingItem {
 export interface DroppableProps {
   group?: string;
   accept?: string[];
+  canDrop?: boolean;
   onDrop?: (item: unknown, itemType: string) => void;
   onHover?: (item: unknown, offset: XYCoord, itemType: string) => void;
   children?: ReactNode;
 }
 
+export type DragInfo = {
+  item: DragItem;
+  type: string;
+};
+
 export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
   style?: CSSProperties;
   layouts: LayoutItem[];
   margin?: [number, number];
+  nested?: boolean;
+  droppable?: boolean;
   containerPadding?: [number, number];
   className?: string;
   cols?: number;
@@ -46,7 +54,12 @@ export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
   compactType?: CompactType;
   renderItem: (item: LayoutItem) => ReactNode;
   onLayoutChange?: (layouts: LayoutItem[]) => void;
-  onDrop?: (layouts: LayoutItem[], droppedItem: LayoutItem) => void;
+  onDrop?: (
+    layouts: LayoutItem[],
+    droppedItem: LayoutItem,
+    dragInfo: DragInfo,
+    group: string
+  ) => void;
 }
 
 export type PositionParams = {
@@ -83,6 +96,7 @@ export type ItemProps = Omit<DraggableProps, 'data' | 'draggable'> &
     minH?: number;
     maxH?: number;
     resizeHandles?: ResizeHandle[];
+    onResizeStart?: (data: LayoutItem, w: number, h: number) => void;
     onResize?: (data: LayoutItem, w: number, h: number) => void;
     onResizeStop?: (data: LayoutItem, w: number, h: number) => void;
   };
