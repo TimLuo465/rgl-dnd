@@ -1,9 +1,9 @@
-import { CSSProperties, ReactNode } from 'react';
+import React, { CSSProperties, ReactNode } from 'react';
 import { XYCoord } from 'react-dnd';
 import { ResizeHandle } from 'react-resizable';
 
 export interface DragItem {
-  i: string;
+  i?: string;
   static?: boolean;
   [key: string]: any;
 }
@@ -14,6 +14,10 @@ export interface LayoutItem extends DragItem {
   y: number;
   w: number;
   h: number;
+  minW?: number;
+  maxW?: number;
+  minH?: number;
+  maxH?: number;
   placeholder?: boolean;
 }
 
@@ -21,6 +25,10 @@ export interface DroppingItem {
   i: string;
   w: number;
   h: number;
+  minW?: number;
+  maxW?: number;
+  minH?: number;
+  maxH?: number;
 }
 
 export interface DroppableProps {
@@ -37,6 +45,8 @@ export type DragInfo = {
   type: string;
 };
 
+export type RenderItemResult = { node: ReactNode; props: Partial<ItemProps> };
+
 export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
   style?: CSSProperties;
   layouts: LayoutItem[];
@@ -52,8 +62,10 @@ export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
   droppingItem?: DroppingItem;
   preventCollision?: boolean;
   compactType?: CompactType;
-  renderItem: (item: LayoutItem) => ReactNode;
+  renderItem: (item: LayoutItem) => ReactNode | RenderItemResult;
   onLayoutChange?: (layouts: LayoutItem[]) => void;
+  onDragOver?: (layoutItem: LayoutItem) => void;
+  onResizeStop?: (layouts: LayoutItem[]) => void;
   onDrop?: (
     layouts: LayoutItem[],
     droppedItem: LayoutItem,
@@ -88,13 +100,10 @@ export interface DraggableProps {
   onDragStart?: (draggedItem: DragItem) => void;
 }
 
-export type ItemProps = Omit<DraggableProps, 'data' | 'draggable'> &
+export type ItemProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onDragEnd' | 'onDragStart'> &
+  Omit<DraggableProps, 'data' | 'draggable'> &
   PositionParams & {
     data: LayoutItem;
-    minW?: number;
-    maxW?: number;
-    minH?: number;
-    maxH?: number;
     resizeHandles?: ResizeHandle[];
     onResizeStart?: (data: LayoutItem, w: number, h: number) => void;
     onResize?: (data: LayoutItem, w: number, h: number) => void;

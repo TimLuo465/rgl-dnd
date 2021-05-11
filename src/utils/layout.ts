@@ -22,10 +22,6 @@ export function bottom(layouts: LayoutItem[]): number {
   return max;
 }
 
-type Params = {
-  containerPadding;
-};
-
 export function getContainerHeight(
   layouts: LayoutItem[],
   params: Omit<PositionParams, 'maxRows' | 'cols' | 'containerWidth'>

@@ -6,7 +6,7 @@ const Droppable: React.FC<DroppableProps> = (props) => {
   const { accept, children, canDrop, onDrop, onHover } = props;
   const [, connect] = useDrop(
     () => ({
-      accept,
+      accept: canDrop ? accept : [],
       drop(_item: unknown, monitor) {
         const item = monitor.getItem();
         const itemType = monitor.getItemType() as string;
@@ -23,7 +23,6 @@ const Droppable: React.FC<DroppableProps> = (props) => {
           onHover?.(item, offset, itemType);
         }
       },
-      canDrop: () => canDrop !== false,
     }),
     [accept, canDrop, onDrop, onHover]
   );

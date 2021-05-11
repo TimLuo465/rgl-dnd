@@ -2,7 +2,7 @@ import React, { memo, SyntheticEvent, useState } from 'react';
 import { ResizableBox, ResizeCallbackData } from 'react-resizable';
 import { prefixCls } from '../constants';
 import { ItemProps, ItemStates, Size } from '../types';
-import { calcGridItemPosition, calcWH, clamp, setTransform } from '../utils';
+import { calcGridItemPosition, calcWH, getWH, setTransform } from '../utils';
 import Draggable from './Draggable';
 
 type ResizeEventType = 'onResizeStart' | 'onResize' | 'onResizeStop';
@@ -32,15 +32,18 @@ const Item: React.FC<ItemProps> = memo((props: ItemProps) => {
     type,
     style,
     data,
-    cols,
-    minW = 1,
-    maxW = cols,
-    minH = 1,
-    maxH = Infinity,
     resizeHandles,
     children,
     onDragStart,
     onDragEnd,
+    className,
+    margin,
+    cols,
+    containerWidth,
+    containerPadding,
+    rowHeight,
+    maxRows,
+    ...restProps
   } = props;
   const [resizing, setResizing] = useState<Size>(null);
   const state = { resizing };
@@ -54,17 +57,19 @@ const Item: React.FC<ItemProps> = memo((props: ItemProps) => {
   ) => {
     const { size } = callbackData;
     let { w, h } = calcWH(getPositionParams(props), size.width, size.height, data.x, data.y);
-    let _minW = Math.max(minW, 1);
-    let _maxW = Math.min(maxW, cols - data.x);
-
-    w = clamp(w, _minW, _maxW);
-    h = clamp(h, minH, maxH);
+    const positionParams = getPositionParams(props);
+    const item = {
+      ...data,
+      w,
+      h,
+    };
+    const wh = getWH(item, positionParams);
 
     e.preventDefault();
     e.stopPropagation();
 
     setResizing(evtType === 'onResizeStop' ? null : size);
-    props[evtType]?.(data, w, h);
+    props[evtType]?.(data, wh.w, wh.h);
   };
   const onResizeStart = (e: SyntheticEvent, callbackData: ResizeCallbackData) => {
     handleResize(e, callbackData, 'onResizeStart');
@@ -78,6 +83,7 @@ const Item: React.FC<ItemProps> = memo((props: ItemProps) => {
 
   return (
     <ResizableBox
+      {...restProps}
       {..._style}
       width={position.width}
       height={position.height}
@@ -85,7 +91,7 @@ const Item: React.FC<ItemProps> = memo((props: ItemProps) => {
       onResize={onResize}
       onResizeStop={onResizeStop}
       resizeHandles={resizeHandles}
-      className={`${prefixCls}-item`}
+      className={`${prefixCls}-item ${className}`.trim()}
     >
       <Draggable
         type={type}
