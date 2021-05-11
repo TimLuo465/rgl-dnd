@@ -72,6 +72,7 @@ let hoveredGroups = [];
 
 class Layout extends React.Component<LayoutProps, LayoutStates> {
   group: string = '';
+  mounted: boolean = false;
   event: EventEmitter<InternalEventType> = new EventEmitter<InternalEventType>();
   containerRef: React.RefObject<HTMLDivElement> = React.createRef();
 
@@ -95,9 +96,16 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       groupKeys.forEach((key) => {
         const layout = groupLayouts[key];
         // update accept for use default group layout
-        if (layout?.group.indexOf(DEFAULT_GROUP) > -1) {
-          // layout may not mounted
-          // when layout mounted, trigger state change
+        if (!layout || layout.group.indexOf(DEFAULT_GROUP) === -1) {
+          return;
+        }
+        // layout may not mounted
+        // when layout mounted, trigger state change
+        if (layout.mounted) {
+          layout.setState({
+            accept: groupKeys,
+          });
+        } else {
           layout.event.on('mounted', () => {
             layout.setState({
               accept: groupKeys,
@@ -137,29 +145,30 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   }
 
   componentDidMount() {
-    const containerDOM = this.containerRef.current;
-    const initStates = () => {
-      if (containerDOM) {
-        this.setState({
-          offset: containerDOM.getBoundingClientRect(),
-          containerWidth: containerDOM.offsetWidth,
-        });
-      }
-    };
-
     if (this.props.nested) {
       // hack code for nested layout
       setTimeout(() => {
-        initStates();
+        this.resize();
       }, 50);
     } else {
-      initStates();
+      this.resize();
     }
 
+    this.mounted = true;
     window.addEventListener('resize', this.resize);
     event.on('dragEnd.cardItem', this.onCardItemDragEnd);
     this.onLayoutMaybeChanged(this.state.layouts, this.props.layouts);
     this.event.emit('mounted');
+  }
+
+  componentDidUpdate(prevProps: LayoutProps, prevState: LayoutStates) {
+    const { placeholder, layouts } = this.state;
+
+    if (hoveredGroups.length || placeholder) {
+      return;
+    }
+
+    this.onLayoutMaybeChanged(layouts, prevState.layouts, false);
   }
 
   componentWillUnmount() {
@@ -168,7 +177,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     event.off('dragEnd.cardItem', this.onCardItemDragEnd);
   }
 
-  onLayoutMaybeChanged(newLayouts: LayoutItem[], oldLayouts?: LayoutItem[]) {
+  // isUserAction - if true, it maybe drop, resize or swap, if false, it maybe correctBounds
+  onLayoutMaybeChanged(newLayouts: LayoutItem[], oldLayouts?: LayoutItem[], isUserAction = true) {
     if (!oldLayouts) {
       oldLayouts = this.state.layouts;
     }
@@ -176,7 +186,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     const equal = isEqual(oldLayouts, newLayouts);
 
     if (!equal) {
-      this.props.onLayoutChange?.(cloneLayouts(newLayouts));
+      this.props.onLayoutChange?.(cloneLayouts(newLayouts), isUserAction);
     }
 
     return equal;
@@ -188,6 +198,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
     if (containerDOM && containerDOM.offsetWidth !== containerWidth) {
       this.setState({
+        offset: containerDOM.getBoundingClientRect(),
         containerWidth: containerDOM.offsetWidth,
       });
     }
@@ -402,9 +413,11 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     this.props.onDrop?.(layouts, layoutItem, { item: dragItem, type: itemType }, this.group);
   };
 
-  onDragStart = () => {
+  onDragStart = (dragItem: DragItem) => {
     const { layouts } = this.state;
+    const layoutItem = getLayoutItem(layouts, dragItem.i);
 
+    this.props.onDragStart?.(layoutItem);
     this.setState({
       oldLayouts: cloneLayouts(layouts),
     });

@@ -63,7 +63,8 @@ export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
   preventCollision?: boolean;
   compactType?: CompactType;
   renderItem: (item: LayoutItem) => ReactNode | RenderItemResult;
-  onLayoutChange?: (layouts: LayoutItem[]) => void;
+  onLayoutChange?: (layouts: LayoutItem[], isUserAction: boolean) => void;
+  onDragStart?: (layoutItem: LayoutItem) => void;
   onDragOver?: (layoutItem: LayoutItem) => void;
   onResizeStop?: (layouts: LayoutItem[]) => void;
   onDrop?: (
