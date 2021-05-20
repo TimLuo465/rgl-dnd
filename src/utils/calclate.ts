@@ -55,15 +55,15 @@ export function calcGridItemPosition(
   }
 
   // If dragging, use the exact width and height as returned from dragging callbacks.
-  if (state && state.dragging) {
-    out.top = Math.round(state.dragging.top);
-    out.left = Math.round(state.dragging.left);
-  }
+  // if (state && state.dragging) {
+  //   out.top = Math.round(state.dragging.top);
+  //   out.left = Math.round(state.dragging.left);
+  // }
   // Otherwise, calculate from grid units.
-  else {
-    out.top = Math.round((rowHeight + margin[1]) * y + containerPadding[1]);
-    out.left = Math.round((colWidth + margin[0]) * x + containerPadding[0]);
-  }
+  // else {
+  out.top = Math.round((rowHeight + margin[1]) * y + containerPadding[1]);
+  out.left = Math.round((colWidth + margin[0]) * x + containerPadding[0]);
+  // }
 
   return out;
 }

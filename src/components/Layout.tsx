@@ -1,5 +1,5 @@
 import EventEmitter from 'eventemitter3';
-import React, { CSSProperties, ReactNode } from 'react';
+import React, { CSSProperties } from 'react';
 import { XYCoord } from 'react-dnd';
 import {
   DEFAULT_COLS,
@@ -12,14 +12,7 @@ import {
   DEFAULT_ROWHEIGHT,
   prefixCls,
 } from '../constants';
-import {
-  DragItem,
-  InternalEventType,
-  ItemProps,
-  LayoutItem,
-  LayoutProps,
-  RenderItemResult,
-} from '../types';
+import { DragItem, InternalEventType, LayoutItem, LayoutProps } from '../types';
 import {
   calcGridItemPosition,
   calcXY,
@@ -31,6 +24,7 @@ import {
   getWH,
   isEqual,
   moveElement,
+  pickLayoutItem,
   reLayout,
   setTransform,
   withLayoutItem,
@@ -230,6 +224,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     layout.setState({
       layouts: compact(layouts, compactType, cols),
       draggingItem: null,
+      placeholder: null,
       prevPosition: null,
     });
   };
@@ -308,11 +303,14 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       compactType,
       cols
     );
+    const compactedLayout = compact(newLayouts, compactType, cols);
+    const compactedItem = getLayoutItem(compactedLayout, layoutItem.i);
 
     this.setState({
       draggingItem: layoutItem,
       prevPosition: position,
-      layouts: compact(newLayouts, compactType, cols),
+      placeholder: pickLayoutItem(compactedItem),
+      layouts: compactedLayout,
     });
   }
 
@@ -449,6 +447,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
     this.setState({
       draggingItem: null,
+      placeholder: null,
       prevPosition: null,
       oldLayouts: null,
     });
@@ -470,6 +469,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
         this.setState({
           draggingItem: null,
+          placeholder: null,
           prevPosition: null,
           layouts: cloneLayouts(oldLayouts),
         });
@@ -576,37 +576,26 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   };
 
   renderItem = (l: LayoutItem) => {
-    const { resizeHandles, renderItem } = this.props;
-
-    if (l.placeholder) {
-      return this.renderPlaceholder(l);
-    }
-
-    const result = renderItem(l) as RenderItemResult;
-    let children: ReactNode = result;
-    let itemProps: Partial<ItemProps> = {};
-
-    if (result.node) {
-      children = result.node;
-      itemProps = result.props;
-    }
+    const { placeholder } = this.state;
+    const { resizeHandles, renderItem, getItemProps } = this.props;
 
     return (
       <Item
         key={l.i}
         type={this.group}
         data={l}
+        placeholder={l.i === placeholder?.i}
+        isDragging={!!this.state.draggingItem}
         {...this.getPositionParams()}
-        {...itemProps}
+        {...getItemProps?.(l)}
         resizeHandles={resizeHandles}
         onDragEnd={this.onDragEnd}
         onDragStart={this.onDragStart}
         onResizeStart={this.onDragStart}
         onResize={this.onResize}
         onResizeStop={this.onResizeStop}
-      >
-        {children}
-      </Item>
+        renderItem={renderItem}
+      />
     );
   };
 

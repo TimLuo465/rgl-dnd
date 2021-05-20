@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Draggable, Layout, Provider } from '..';
 import { DEFAULT_GROUP } from '../constants';
 import { LayoutItem } from '../types';
@@ -138,8 +138,14 @@ const mockLayouts = [
   },
 ];
 
+const Item: React.FC = () => {
+  const [count, setCount] = useState(0);
+
+  return <button onClick={() => setCount(count + 1)}>{count}</button>;
+};
 export const Default: React.FC = () => {
   const [layouts, setLayouts] = useState<LayoutItem[]>(mockLayouts);
+  const [clsName, setClsName] = useState<string>('');
   const ref1 = useRef(null);
   const [layouts2, setLayouts2] = useState<LayoutItem[]>([
     { i: '3', x: 0, y: 0, w: 1, h: 20 },
@@ -164,14 +170,14 @@ export const Default: React.FC = () => {
     layouts2.splice(index, 1);
     setLayouts2(layouts2.slice());
   };
-  const renderItem1 = (item) => {
+  const renderItem1 = useCallback((item) => {
     return (
       <div className="kkk">
         {item.i.substring(1, 5)}
         <button onClick={() => deleteItem1(item.i)}>delete</button>
       </div>
     );
-  };
+  }, []);
   const onDrop1 = (_layouts, layoutItem, dragInfo, group) => {
     if (dragInfo.type !== group) {
       layouts.push(layoutItem);
@@ -193,38 +199,46 @@ export const Default: React.FC = () => {
       setLayouts3(layouts3.slice());
     }
   };
-  const renderItem2 = (item) => {
-    if (item.i === '3') {
+  const renderItem2 = useCallback(
+    (item) => {
+      if (item.i === '3') {
+        return (
+          <div>
+            <Layout
+              nested={true}
+              rowHeight={1}
+              group={`${DEFAULT_GROUP}__${item.i}`}
+              layouts={layouts3}
+              margin={[0, 0]}
+              onDragOver={(l) => {
+                l.minW = 12;
+              }}
+              containerPadding={[0, 0]}
+              style={{ minHeight: '100%' }}
+              droppable={layouts3.length < 1}
+              droppingItem={{ ...droppingItem, w: 12, h: 5 }}
+              renderItem={(item) => (
+                <div>
+                  {item.i.substring(1, 5)}
+                  <button onClick={() => deleteItem2(item.i)}>delete</button>
+                </div>
+              )}
+              onDrop={onDrop3}
+              onLayoutChange={setLayouts3}
+            />
+          </div>
+        );
+      }
+      console.log('render item');
       return (
-        <div>
-          <Layout
-            nested={true}
-            rowHeight={1}
-            group={`${DEFAULT_GROUP}__${item.i}`}
-            layouts={layouts3}
-            margin={[0, 0]}
-            onDragOver={(l) => {
-              l.minW = 12;
-            }}
-            containerPadding={[0, 0]}
-            style={{ minHeight: '100%' }}
-            droppable={layouts3.length < 1}
-            droppingItem={{ ...droppingItem, w: 12, h: 5 }}
-            renderItem={(item) => <div>{item.i}</div>}
-            onDrop={onDrop3}
-            onLayoutChange={setLayouts3}
-          />
+        <div className="sa">
+          {item.i}-{clsName}
+          <Item />
         </div>
       );
-    }
-
-    return (
-      <div>
-        {item.i.substring(1, 5)}
-        <button onClick={() => deleteItem2(item.i)}>delete</button>
-      </div>
-    );
-  };
+    },
+    [clsName]
+  );
   const onClick = () => {
     setLayouts2(
       layouts2.map((l) => {
@@ -245,6 +259,9 @@ export const Default: React.FC = () => {
         <div>Box1</div>
       </Draggable>
       <Draggable>Box2</Draggable>
+      <button onClick={() => setClsName(new Date().getTime().toString().substring(5))}>
+        change clsName
+      </button>
       <div style={{ marginBottom: 20 }}>
         <button onClick={onClick}>change Layout</button>
       </div>
@@ -288,6 +305,7 @@ export const Default: React.FC = () => {
           droppingItem={droppingItem}
           layouts={layouts2}
           renderItem={renderItem2}
+          getItemProps={() => ({ className: clsName })}
           rowHeight={1}
           cols={12}
           onDrop={onDrop2}

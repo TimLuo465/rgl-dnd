@@ -45,8 +45,6 @@ export type DragInfo = {
   type: string;
 };
 
-export type RenderItemResult = { node: ReactNode; props: Partial<ItemProps> };
-
 export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
   style?: CSSProperties;
   layouts: LayoutItem[];
@@ -62,7 +60,8 @@ export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
   droppingItem?: DroppingItem;
   preventCollision?: boolean;
   compactType?: CompactType;
-  renderItem: (item: LayoutItem) => ReactNode | RenderItemResult;
+  renderItem: (item: LayoutItem) => ReactNode;
+  getItemProps?: (item: LayoutItem) => Partial<ItemProps>;
   onLayoutChange?: (layouts: LayoutItem[], isUserAction: boolean) => void;
   onDragStart?: (layoutItem: LayoutItem) => void;
   onDragOver?: (layoutItem: LayoutItem) => void;
@@ -101,10 +100,16 @@ export interface DraggableProps {
   onDragStart?: (draggedItem: DragItem) => void;
 }
 
-export type ItemProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onDragEnd' | 'onDragStart'> &
+export type ItemProps = Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  'onDragEnd' | 'onDragStart' | 'placeholder'
+> &
   Omit<DraggableProps, 'data' | 'draggable'> &
   PositionParams & {
     data: LayoutItem;
+    isDragging?: boolean;
+    placeholder?: boolean;
+    renderItem: (item: LayoutItem) => ReactNode;
     resizeHandles?: ResizeHandle[];
     onResizeStart?: (data: LayoutItem, w: number, h: number) => void;
     onResize?: (data: LayoutItem, w: number, h: number) => void;
@@ -118,10 +123,7 @@ export type Size = {
 
 export type ItemStates = {
   resizing: Size;
-  dragging?: {
-    left: number;
-    top: number;
-  };
+  node: ReactNode;
 };
 
 export type CompactType = 'horizontal' | 'vertical';

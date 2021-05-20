@@ -498,8 +498,8 @@ export function withLayoutItem(
   return [layouts, item];
 }
 
-export function pickLayoutItem({ i, x, y, h, w, group }: LayoutItem) {
-  return { i, x, y, h, w, group };
+export function pickLayoutItem({ i, x, y, h, w }: LayoutItem) {
+  return { i, x, y, h, w };
 }
 
 export function isEqual(layouts1: LayoutItem[], layouts2: LayoutItem[]) {
