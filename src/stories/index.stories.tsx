@@ -252,7 +252,7 @@ export const Default: React.FC = () => {
   useEffect(() => {
     ref1.current.resize();
   }, []);
-  console.log(droppingItem);
+
   return (
     <Provider>
       <Draggable onDragStart={console.log} onDragEnd={console.log}>

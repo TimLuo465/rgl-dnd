@@ -41,12 +41,11 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
   }
 
   componentDidUpdate(prevProps: ItemProps) {
-    const { isDragging } = this.props;
+    const { isDragging, placeholder } = this.props;
 
-    if (isDragging) {
+    if (isDragging || placeholder) {
       return;
     }
-
     if (!this.state.node || !isEqual(this.pickProps(prevProps), this.pickProps(this.props))) {
       this.setState({
         node: this.renderItem(),
@@ -55,12 +54,9 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
   }
 
   pickProps(props: ItemProps) {
-    const { data } = props;
+    const { isDragging, placeholder, ...restProps } = props;
 
-    return {
-      data,
-      ...getPositionParams(props),
-    };
+    return restProps;
   }
 
   setResizing(resizing: Size) {
@@ -141,7 +137,9 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
         onResize={this.onResize}
         onResizeStop={this.onResizeStop}
         resizeHandles={resizeHandles}
-        className={`${prefixCls}-item${placeholder ? '-placeholder' : ''} ${className}`.trim()}
+        className={`${prefixCls}-item${
+          isDragging && placeholder ? '-placeholder' : ''
+        } ${className}`.trim()}
       >
         <Draggable
           type={type}

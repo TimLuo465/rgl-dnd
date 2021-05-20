@@ -156,9 +156,9 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   }
 
   componentDidUpdate(prevProps: LayoutProps, prevState: LayoutStates) {
-    const { placeholder, layouts } = this.state;
+    const { layouts } = this.state;
 
-    if (hoveredGroups.length || placeholder) {
+    if (hoveredGroups.length || prevState.placeholder) {
       return;
     }
 
@@ -541,12 +541,13 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     const { cols, compactType, onResizeStop } = this.props;
     const newLayouts = compact(layouts, compactType, cols);
 
+    this.onLayoutMaybeChanged(newLayouts, oldLayouts);
+    onResizeStop?.(newLayouts);
     this.setState({
       placeholder: null,
       oldLayouts: null,
+      layouts: newLayouts,
     });
-    this.onLayoutMaybeChanged(newLayouts, oldLayouts);
-    onResizeStop?.(newLayouts);
   };
 
   getPositionParams = () => {
