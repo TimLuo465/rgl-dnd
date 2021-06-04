@@ -145,7 +145,7 @@ export function calcLayoutByProps(
 
   return {
     ...layout,
-    w,
-    h,
+    w: Math.max(w, 1),
+    h: Math.max(h, 1),
   };
 }
