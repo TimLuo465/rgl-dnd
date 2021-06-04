@@ -140,10 +140,12 @@ export function calcLayoutByProps(
 ): LayoutItem {
   const { cols, rowHeight, margin } = currProps;
   const { rowHeight: _rowHeight, margin: _margin } = props;
-  console.log('calc');
+  const w = Math.round((layout.w * cols) / props.cols);
+  const h = Math.round((layout.h * (_rowHeight + _margin[1])) / (rowHeight + margin[1]));
+
   return {
     ...layout,
-    w: (layout.w * cols) / props.cols,
-    h: (layout.h * (_rowHeight + _margin[1])) / (rowHeight + margin[1]),
+    w,
+    h,
   };
 }

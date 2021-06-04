@@ -366,7 +366,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
           placeholder: true,
           group,
         };
-        console.log(layoutItem);
+
         // remove same item in other group layout
         this.removeOtherGroupItem(layoutItem, itemType);
       } else {
