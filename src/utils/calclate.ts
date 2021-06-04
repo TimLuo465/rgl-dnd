@@ -1,4 +1,4 @@
-import { ItemStates, Position, PositionParams } from '../types';
+import { ItemStates, LayoutItem, LayoutProps, Position, PositionParams } from '../types';
 
 // Helper for generating column width
 export function calcGridColWidth(positionParams: PositionParams): number {
@@ -128,4 +128,22 @@ export function calcWH(
   w = clamp(w, 0, cols - x);
   h = clamp(h, 0, maxRows - y);
   return { w, h };
+}
+
+/**
+ * calculate layout szie when drag group item to another group
+ */
+export function calcLayoutByProps(
+  layout: LayoutItem,
+  currProps: LayoutProps,
+  props: LayoutProps
+): LayoutItem {
+  const { cols, rowHeight, margin } = currProps;
+  const { rowHeight: _rowHeight, margin: _margin } = props;
+  console.log('calc');
+  return {
+    ...layout,
+    w: (layout.w * cols) / props.cols,
+    h: (layout.h * (_rowHeight + _margin[1])) / (rowHeight + margin[1]),
+  };
 }

@@ -15,6 +15,7 @@ import {
 import { DragItem, InternalEventType, LayoutItem, LayoutProps } from '../types';
 import {
   calcGridItemPosition,
+  calcLayoutByProps,
   calcXY,
   cloneLayouts,
   compact,
@@ -94,7 +95,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
           return;
         }
         // layout may not mounted
-        // when layout mounted, trigger state change
+        // when layout mounted, push default group layout to accept
         if (layout.mounted) {
           layout.setState({
             accept: groupKeys,
@@ -358,12 +359,14 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     // drag group item to other group
     if (!layoutItem) {
       if (itemType !== group) {
+        const props = groupLayouts[itemType].props;
+
         layoutItem = {
-          ...(item as LayoutItem),
+          ...calcLayoutByProps(item as LayoutItem, this.props, props),
           placeholder: true,
           group,
         };
-
+        console.log(layoutItem);
         // remove same item in other group layout
         this.removeOtherGroupItem(layoutItem, itemType);
       } else {
@@ -615,6 +618,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
     return (
       <Droppable
+        weId={this.group}
         group={this.group}
         accept={accept}
         canDrop={droppable}
