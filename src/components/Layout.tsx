@@ -598,6 +598,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
           placeholder={l.i === placeholder?.i}
           isDragging={!!this.state.draggingItem}
           {...this.getPositionParams()}
+          className={child.props.className}
           resizeHandles={resizeHandles}
           onDragEnd={this.onDragEnd}
           onDragStart={this.onDragStart}
@@ -605,7 +606,11 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
           onResize={this.onResize}
           onResizeStop={this.onResizeStop}
         >
-          {child}
+          {React.cloneElement(child, {
+            ...child.props,
+            // move child className to item
+            className: '',
+          })}
         </Item>
       );
     });

@@ -117,7 +117,7 @@ export const Default: React.FC = () => {
       console.log('render item');
       return (
         <div
-          className="sa"
+          className={clsName}
           data-grid={item}
           onClick={() => setClsName(new Date().getTime().toString().substring(5))}
         >
