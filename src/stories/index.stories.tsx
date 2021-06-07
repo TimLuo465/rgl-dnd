@@ -63,7 +63,7 @@ export const Default: React.FC = () => {
   };
   const renderItem1 = useCallback((item) => {
     return (
-      <div className="kkk">
+      <div className="kkk" data-grid={item}>
         {item.i.substring(1, 5)}
         <button onClick={() => deleteItem1(item.i)}>delete</button>
       </div>
@@ -94,7 +94,7 @@ export const Default: React.FC = () => {
     (item) => {
       if (item.i === '3') {
         return (
-          <div>
+          <div data-grid={item}>
             <Layout
               nested={true}
               rowHeight={1}
@@ -108,12 +108,6 @@ export const Default: React.FC = () => {
               style={{ minHeight: '100%' }}
               droppable={layouts3.length < 1}
               droppingItem={{ ...droppingItem, w: 12, h: 5 }}
-              renderItem={(item) => (
-                <div>
-                  {item.i.substring(1, 5)}
-                  <button onClick={() => deleteItem2(item.i)}>delete</button>
-                </div>
-              )}
               onDrop={onDrop3}
               onLayoutChange={setLayouts3}
             />
@@ -122,7 +116,11 @@ export const Default: React.FC = () => {
       }
       console.log('render item');
       return (
-        <div className="sa">
+        <div
+          className="sa"
+          data-grid={item}
+          onClick={() => setClsName(new Date().getTime().toString().substring(5))}
+        >
           {item.i}-{clsName}
           <Item />
         </div>
@@ -150,9 +148,6 @@ export const Default: React.FC = () => {
         <div>Box1</div>
       </Draggable>
       <Draggable>Box2</Draggable>
-      <button onClick={() => setClsName(new Date().getTime().toString().substring(5))}>
-        change clsName
-      </button>
       <div style={{ marginBottom: 20 }}>
         <button onClick={onClick}>change Layout</button>
       </div>
@@ -165,7 +160,6 @@ export const Default: React.FC = () => {
           cols={12}
           ref={ref1}
           onDrop={onDrop1}
-          renderItem={renderItem1}
           onDragOver={(l) => {
             delete l.minW;
           }}
@@ -173,15 +167,15 @@ export const Default: React.FC = () => {
             console.log('change');
             setLayouts(layouts);
           }}
-        />
+        >
+          {layouts.map((item) => renderItem1(item))}
+        </Layout>
       </div>
       <div style={containerStyle}>
         <Layout
           style={{ minHeight: '100%' }}
           droppingItem={droppingItem}
           layouts={layouts2}
-          renderItem={renderItem2}
-          getItemProps={() => ({ className: clsName })}
           rowHeight={1}
           cols={6}
           margin={[10, 5]}
@@ -193,7 +187,9 @@ export const Default: React.FC = () => {
             console.log('change2: ', layouts);
             setLayouts2(layouts);
           }}
-        />
+        >
+          {layouts2.map((item) => renderItem2(item))}
+        </Layout>
       </div>
     </Provider>
   );

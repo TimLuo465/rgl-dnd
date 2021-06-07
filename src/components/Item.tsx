@@ -1,4 +1,3 @@
-import isEqual from 'lodash.isequal';
 import React, { PureComponent, SyntheticEvent } from 'react';
 import { ResizableBox, ResizeCallbackData } from 'react-resizable';
 import { prefixCls } from '../constants';
@@ -31,27 +30,7 @@ const getPosition = (props: ItemProps, state: ItemStates) => {
 export default class Item extends PureComponent<ItemProps, ItemStates> {
   state: ItemStates = {
     resizing: null,
-    node: null,
   };
-
-  componentDidMount() {
-    this.setState({
-      node: this.renderItem(),
-    });
-  }
-
-  componentDidUpdate(prevProps: ItemProps) {
-    const { isDragging, placeholder } = this.props;
-
-    if (isDragging || placeholder) {
-      return;
-    }
-    if (!this.state.node || !isEqual(this.pickProps(prevProps), this.pickProps(this.props))) {
-      this.setState({
-        node: this.renderItem(),
-      });
-    }
-  }
 
   pickProps(props: ItemProps) {
     const { isDragging, placeholder, ...restProps } = props;
@@ -96,12 +75,6 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
     this.handleResize(e, callbackData, 'onResizeStop');
   };
 
-  renderItem() {
-    const { renderItem, data } = this.props;
-
-    return renderItem(data);
-  }
-
   render() {
     const {
       type,
@@ -118,12 +91,11 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
       containerPadding,
       rowHeight,
       maxRows,
-      renderItem,
       isDragging,
       placeholder,
       ...restProps
     } = this.props;
-    const { resizing, node } = this.state;
+    const { resizing } = this.state;
     const position = getPosition(this.props, this.state);
     const _style: any = { style: { ...style, ...position, ...resizing } };
 
@@ -148,7 +120,7 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
           onDragEnd={onDragEnd}
           onDragStart={onDragStart}
         >
-          {node}
+          {children}
         </Draggable>
       </ResizableBox>
     );

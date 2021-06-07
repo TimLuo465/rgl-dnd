@@ -579,29 +579,37 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     return <div key={i} className={`${prefixCls}-placeholder`} style={setTransform(position)} />;
   };
 
-  renderItem = (l: LayoutItem) => {
+  renderItems() {
     const { placeholder } = this.state;
-    const { resizeHandles, renderItem, getItemProps } = this.props;
+    const { children, resizeHandles } = this.props;
 
-    return (
-      <Item
-        key={l.i}
-        type={this.group}
-        data={l}
-        placeholder={l.i === placeholder?.i}
-        isDragging={!!this.state.draggingItem}
-        {...this.getPositionParams()}
-        {...getItemProps?.(l)}
-        resizeHandles={resizeHandles}
-        onDragEnd={this.onDragEnd}
-        onDragStart={this.onDragStart}
-        onResizeStart={this.onDragStart}
-        onResize={this.onResize}
-        onResizeStop={this.onResizeStop}
-        renderItem={renderItem}
-      />
-    );
-  };
+    return React.Children.map(children, (child: React.ReactElement) => {
+      const l = child.props['data-grid'];
+
+      if (!l || child.type !== 'div') {
+        return null;
+      }
+
+      return (
+        <Item
+          key={l.i}
+          type={this.group}
+          data={l}
+          placeholder={l.i === placeholder?.i}
+          isDragging={!!this.state.draggingItem}
+          {...this.getPositionParams()}
+          resizeHandles={resizeHandles}
+          onDragEnd={this.onDragEnd}
+          onDragStart={this.onDragStart}
+          onResizeStart={this.onDragStart}
+          onResize={this.onResize}
+          onResizeStop={this.onResizeStop}
+        >
+          {child}
+        </Item>
+      );
+    });
+  }
 
   render() {
     const { layouts, accept, placeholder } = this.state;
@@ -627,7 +635,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       >
         <div ref={this.containerRef} className={clsNameStr} style={containerStyle}>
           {this.renderPlaceholder(placeholder)}
-          {layouts.map(this.renderItem)}
+          {this.renderItems()}
         </div>
       </Droppable>
     );
@@ -649,7 +657,6 @@ Layout.defaultProps = {
   preventCollision: false,
   compactType: 'vertical',
   resizeHandles: ['se'],
-  renderItem: () => null,
 };
 
 export default Layout;

@@ -60,8 +60,6 @@ export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
   droppingItem?: DroppingItem;
   preventCollision?: boolean;
   compactType?: CompactType;
-  renderItem: (item: LayoutItem) => ReactNode;
-  getItemProps?: (item: LayoutItem) => Partial<ItemProps>;
   onLayoutChange?: (layouts: LayoutItem[], isUserAction: boolean) => void;
   onDragStart?: (layoutItem: LayoutItem) => void;
   onDragOver?: (layoutItem: LayoutItem) => void;
@@ -109,7 +107,6 @@ export type ItemProps = Omit<
     data: LayoutItem;
     isDragging?: boolean;
     placeholder?: boolean;
-    renderItem: (item: LayoutItem) => ReactNode;
     resizeHandles?: ResizeHandle[];
     onResizeStart?: (data: LayoutItem, w: number, h: number) => void;
     onResize?: (data: LayoutItem, w: number, h: number) => void;
@@ -123,7 +120,6 @@ export type Size = {
 
 export type ItemStates = {
   resizing: Size;
-  node: ReactNode;
 };
 
 export type CompactType = 'horizontal' | 'vertical';
