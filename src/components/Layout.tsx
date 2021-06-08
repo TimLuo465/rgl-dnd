@@ -324,6 +324,10 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     let layoutItem: LayoutItem;
 
     if (!draggingItem) {
+      if (!droppingItem) {
+        return null;
+      }
+
       const _item: any = {
         ...item,
         ...droppingItem,
@@ -580,13 +584,24 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   };
 
   renderItems() {
-    const { placeholder } = this.state;
+    const { placeholder, layouts, draggingItem } = this.state;
     const { children, resizeHandles } = this.props;
 
     return React.Children.map(children, (child: React.ReactElement) => {
       const l = child.props['data-grid'];
+      let item: LayoutItem;
 
       if (!l || child.type !== 'div') {
+        return null;
+      }
+
+      if (draggingItem?.i === l.i) {
+        item = draggingItem;
+      } else {
+        item = getLayoutItem(layouts, l.i);
+      }
+
+      if (!item) {
         return null;
       }
 
@@ -594,11 +609,12 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
         <Item
           key={l.i}
           type={this.group}
-          data={l}
+          data={getLayoutItem(layouts, l.i)}
           placeholder={l.i === placeholder?.i}
           isDragging={!!this.state.draggingItem}
           {...this.getPositionParams()}
           className={child.props.className}
+          onClick={child.props.onClick}
           resizeHandles={resizeHandles}
           onDragEnd={this.onDragEnd}
           onDragStart={this.onDragStart}
