@@ -1,9 +1,37 @@
 import { ItemStates, LayoutItem, LayoutProps, Position, PositionParams } from '../types';
 
+export function getContainerPadding(containerPadding: number[]): [number, number, number, number] {
+  const len = containerPadding.length;
+  const [top, right, bottom, left] = containerPadding;
+
+  if (len === 1) {
+    return [top, top, top, top];
+  } else if (len === 2) {
+    return [top, right, top, right];
+  } else if (len === 3) {
+    return [top, right, bottom, right];
+  }
+
+  return [top, right, bottom, left];
+}
+
+export function calcCP(containerPadding, axis: 'x' | 'y') {
+  const cp = getContainerPadding(containerPadding);
+  const [top, right, bottom, left] = cp;
+
+  if (axis === 'x') {
+    return right + left;
+  }
+
+  return top + bottom;
+}
+
 // Helper for generating column width
 export function calcGridColWidth(positionParams: PositionParams): number {
   const { margin, containerPadding, containerWidth, cols } = positionParams;
-  return (containerWidth - margin[0] * (cols - 1) - containerPadding[0] * 2) / cols;
+  const cp = calcCP(containerPadding, 'x');
+
+  return (containerWidth - margin[0] * (cols - 1) - cp) / cols;
 }
 
 // This can either be called:
@@ -40,7 +68,7 @@ export function calcGridItemPosition(
 ): Position {
   const { margin, containerPadding, rowHeight } = positionParams;
   const colWidth = calcGridColWidth(positionParams);
-
+  const [top, , , left] = getContainerPadding(containerPadding);
   const out = {} as Position;
 
   // If resizing, use the exact width and height as returned from resizing callbacks.
@@ -61,8 +89,8 @@ export function calcGridItemPosition(
   // }
   // Otherwise, calculate from grid units.
   // else {
-  out.top = Math.round((rowHeight + margin[1]) * y + containerPadding[1]);
-  out.left = Math.round((colWidth + margin[0]) * x + containerPadding[0]);
+  out.top = Math.round((rowHeight + margin[1]) * y + top);
+  out.left = Math.round((colWidth + margin[0]) * x + left);
   // }
 
   return out;

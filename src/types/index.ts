@@ -51,7 +51,7 @@ export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
   margin?: [number, number];
   nested?: boolean;
   droppable?: boolean;
-  containerPadding?: [number, number];
+  containerPadding?: number[];
   className?: string;
   cols?: number;
   resizeHandles?: ResizeHandle[];
@@ -74,7 +74,7 @@ export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
 
 export type PositionParams = {
   margin: [number, number];
-  containerPadding: [number, number];
+  containerPadding: number[];
   containerWidth: number;
   cols: number;
   rowHeight: number;

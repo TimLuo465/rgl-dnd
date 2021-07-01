@@ -67,6 +67,7 @@
     "ts-loader": "^8.0.1",
     "typescript": "^3.9.7"
   },
+  "types": "./dist/index.d.ts",
   "peerDependencies": {
     "react": ">=16.8.0",
     "react-dom": ">=16.8.0"

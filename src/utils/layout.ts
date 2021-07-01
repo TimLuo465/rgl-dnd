@@ -1,5 +1,6 @@
 import lodashEqual from 'lodash.isequal';
 import { CompactType, DragItem, LayoutItem, PositionParams } from '../types';
+import { calcCP } from './calclate';
 
 /**
  * Return the bottom coordinate of the layout.
@@ -28,10 +29,10 @@ export function getContainerHeight(
 ): string {
   const nbRow = bottom(layouts);
   const { containerPadding, margin, rowHeight } = params;
-  const [, cpY] = containerPadding;
+  const cp = calcCP(containerPadding, 'y');
   const [, mY] = margin;
 
-  return nbRow * rowHeight + (nbRow - 1) * mY + cpY * 2 + 'px';
+  return nbRow * rowHeight + (nbRow - 1) * mY + cp + 'px';
 }
 
 export function getLayoutItem(layouts: LayoutItem[], i: string): LayoutItem | null {
