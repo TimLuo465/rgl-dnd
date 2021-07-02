@@ -22,6 +22,7 @@ import {
   getAllCollisions,
   getContainerHeight,
   getLayoutItem,
+  getScrollbar,
   getWH,
   isEqual,
   moveElement,
@@ -70,6 +71,9 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   mounted: boolean = false;
   event: EventEmitter<InternalEventType> = new EventEmitter<InternalEventType>();
   containerRef: React.RefObject<HTMLDivElement> = React.createRef();
+
+  /** The lastest parent node with scrollbar */
+  scrollbar: HTMLElement | null = null;
 
   static defaultProps: LayoutProps;
 
@@ -245,6 +249,10 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     const { layouts, oldLayouts } = this.state;
     let layoutItem: LayoutItem | null = null;
 
+    if (!this.scrollbar) {
+      this.scrollbar = getScrollbar(this.containerRef.current);
+    }
+
     if (!oldLayouts) {
       this.setState({
         oldLayouts: cloneLayouts(layouts),
@@ -271,7 +279,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   calcXY(item: LayoutItem, offset: XYCoord) {
     const positionParams = this.getPositionParams();
     const { offset: parentOffset } = this.state;
-    const { scrollTop, scrollLeft } = this.containerRef.current.parentElement;
+    const { scrollTop, scrollLeft } = this.scrollbar;
     const x = offset.x - parentOffset.x + scrollLeft;
     const y = offset.y - parentOffset.y + scrollTop;
 
@@ -458,6 +466,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       prevPosition: null,
       oldLayouts: null,
     });
+    this.scrollbar = null;
   }
 
   onCardItemDragEnd = (item: DragItem, didDrop: boolean, itemType: string) => {

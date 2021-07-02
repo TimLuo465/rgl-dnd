@@ -513,3 +513,19 @@ export function isEqual(layouts1: LayoutItem[], layouts2: LayoutItem[]) {
 export function cloneLayouts(layouts: LayoutItem[]) {
   return JSON.parse(JSON.stringify(layouts));
 }
+
+export function getScrollbar(node: HTMLElement): HTMLElement | null {
+  let target = node;
+
+  while (target.tagName !== 'BODY') {
+    const { overflow } = window.getComputedStyle(target);
+
+    if (overflow === 'scroll' || overflow === 'auto') {
+      return target;
+    }
+
+    target = target.parentElement;
+  }
+
+  return null;
+}
