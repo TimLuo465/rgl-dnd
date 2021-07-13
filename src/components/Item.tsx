@@ -1,7 +1,7 @@
 import React, { PureComponent, SyntheticEvent } from 'react';
 import { ResizableBox, ResizeCallbackData } from 'react-resizable';
 import { prefixCls } from '../constants';
-import { ItemProps, ItemStates, Size } from '../types';
+import { ItemProps, ItemStates, LayoutItem, PositionParams, Size } from '../types';
 import { calcGridItemPosition, calcWH, getWH, setTransform } from '../utils';
 import Draggable from './Draggable';
 
@@ -19,9 +19,7 @@ const getPositionParams = (props: ItemProps) => {
     maxRows,
   };
 };
-const getPosition = (props: ItemProps, state: ItemStates) => {
-  const { data } = props;
-  const positionParams = getPositionParams(props);
+const getPosition = (data: LayoutItem, positionParams: PositionParams, state: ItemStates) => {
   const position = calcGridItemPosition(positionParams, data.x, data.y, data.w, data.h, state);
 
   return setTransform(position);
@@ -96,8 +94,11 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
       ...restProps
     } = this.props;
     const { resizing } = this.state;
-    const position = getPosition(this.props, this.state);
+    const positionParams = getPositionParams(this.props);
+    const position = getPosition(data, positionParams, this.state);
     const _style: any = { style: { ...style, ...position, ...resizing } };
+    const { width: minWidth } = calcGridItemPosition(positionParams, 0, 0, 1, 0);
+    const { width: maxWidth } = calcGridItemPosition(positionParams, 0, 0, cols - data.x, 0);
 
     return (
       <ResizableBox
@@ -109,6 +110,8 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
         onResize={this.onResize}
         onResizeStop={this.onResizeStop}
         resizeHandles={resizeHandles}
+        minConstraints={[minWidth, 10]}
+        maxConstraints={[maxWidth, Infinity]}
         className={`${prefixCls}-item${
           isDragging && placeholder ? '-placeholder' : ''
         } ${className}`.trim()}
