@@ -156,7 +156,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     this.mounted = true;
     window.addEventListener('resize', this.resize);
     event.on('dragEnd.cardItem', this.onCardItemDragEnd);
-    this.onLayoutMaybeChanged(this.state.layouts, this.props.layouts);
+    this.onLayoutMaybeChanged(this.state.layouts, this.props.layouts, false);
     this.event.emit('mounted');
   }
 
