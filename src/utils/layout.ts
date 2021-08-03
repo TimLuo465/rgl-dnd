@@ -518,9 +518,9 @@ export function getScrollbar(node: HTMLElement): HTMLElement | null {
   let target = node;
 
   while (target.tagName !== 'BODY') {
-    const { overflow } = window.getComputedStyle(target);
+    const { overflowY } = window.getComputedStyle(target);
 
-    if (overflow === 'scroll' || overflow === 'auto') {
+    if (overflowY === 'scroll' || overflowY === 'auto') {
       return target;
     }
 
