@@ -21,7 +21,6 @@ const getPositionParams = (props: ItemProps) => {
 };
 const getPosition = (data: LayoutItem, positionParams: PositionParams, state: ItemStates) => {
   const position = calcGridItemPosition(positionParams, data.x, data.y, data.w, data.h, state);
-
   return setTransform(position);
 };
 
@@ -45,22 +44,23 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
     callbackData: ResizeCallbackData,
     evtType: ResizeEventType
   ) => {
-    const { data } = this.props;
-    const { size } = callbackData;
+    const { data, leftSpacing } = this.props;
+    const { size, handle } = callbackData;
+
     const positionParams = getPositionParams(this.props);
-    let { w, h } = calcWH(positionParams, size.width, size.height, data.x, data.y);
+    let { w, h } = calcWH(positionParams, size.width, size.height, data.x, data.y, leftSpacing);
     const item = {
       ...data,
       w,
       h,
     };
-    const wh = getWH(item, positionParams);
+    const wh = getWH(item, positionParams, leftSpacing);
 
     e.preventDefault();
     e.stopPropagation();
 
     this.setResizing(evtType === 'onResizeStop' ? null : size);
-    this.props[evtType]?.(data, wh.w, wh.h);
+    this.props[evtType]?.(data, wh.w, wh.h, handle);
   };
 
   onResizeStart = (e: SyntheticEvent, callbackData: ResizeCallbackData) => {
@@ -83,6 +83,7 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
       onDragStart,
       onDragEnd,
       className = '',
+      leftSpacing = 0,
       margin,
       cols,
       containerWidth,
@@ -98,7 +99,13 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
     const position = getPosition(data, positionParams, this.state);
     const _style: any = { style: { ...style, ...position, ...resizing } };
     const { width: minWidth } = calcGridItemPosition(positionParams, 0, 0, 1, 0);
-    const { width: maxWidth } = calcGridItemPosition(positionParams, 0, 0, cols - data.x, 0);
+    const { width: maxWidth } = calcGridItemPosition(
+      positionParams,
+      0,
+      0,
+      cols - data.x + leftSpacing,
+      0
+    );
 
     return (
       <ResizableBox
