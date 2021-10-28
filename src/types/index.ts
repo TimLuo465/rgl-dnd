@@ -107,9 +107,10 @@ export type ItemProps = Omit<
     data: LayoutItem;
     isDragging?: boolean;
     placeholder?: boolean;
+    leftSpacing?: number;
     resizeHandles?: ResizeHandle[];
     onResizeStart?: (data: LayoutItem, w: number, h: number) => void;
-    onResize?: (data: LayoutItem, w: number, h: number) => void;
+    onResize?: (data: LayoutItem, w: number, h: number, direction: string) => void;
     onResizeStop?: (data: LayoutItem, w: number, h: number) => void;
   };
 

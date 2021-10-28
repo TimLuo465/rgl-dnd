@@ -141,7 +141,8 @@ export function calcWH(
   width: number,
   height: number,
   x: number,
-  y: number
+  y: number,
+  leftSpacing: number
 ): { w: number; h: number } {
   const { margin, maxRows, cols, rowHeight } = positionParams;
   const colWidth = calcGridColWidth(positionParams);
@@ -149,13 +150,13 @@ export function calcWH(
   // width = colWidth * w - (margin * (w - 1))
   // ...
   // w = (width + margin) / (colWidth + margin)
-  let w = Math.round((width + margin[0]) / (colWidth + margin[0]));
+  let w = (width + margin[0]) / (colWidth + margin[0]);
   // Math.round will cause rowHeight not work well
   // Math.round((height + margin[1]) / (rowHeight + margin[1]));
   let h = (height + margin[1]) / (rowHeight + margin[1]);
 
   // Capping
-  w = clamp(w, 0, cols - x);
+  w = clamp(w, 0, cols - x + leftSpacing);
   h = clamp(h, 0, maxRows - y);
   return { w, h };
 }
@@ -178,4 +179,21 @@ export function calcLayoutByProps(
     w: Math.max(w, 1),
     h: Math.max(h, 1),
   };
+}
+
+export function calcLeftSpacing(layouts: LayoutItem[], item: LayoutItem,): number {
+  const leftItems = layouts.filter(
+    (lay) =>
+      lay.i !== item.i &&
+      lay.y <= item.y + item.h &&
+      lay.y + lay.h >= item.y &&
+      lay.x + lay.w <= item.x
+  );
+
+  let leftBoundary = 0;
+  leftItems.forEach((it) => {
+    leftBoundary = Math.max(it.x + it.w, leftBoundary)
+  });
+
+  return item.x - leftBoundary;
 }

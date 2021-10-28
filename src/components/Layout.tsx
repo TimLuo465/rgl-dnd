@@ -16,6 +16,7 @@ import { DragItem, InternalEventType, LayoutItem, LayoutProps } from '../types';
 import {
   calcGridItemPosition,
   calcLayoutByProps,
+  calcLeftSpacing,
   calcXY,
   cloneLayouts,
   compact,
@@ -497,7 +498,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     }
   };
 
-  onResize = (item: LayoutItem, w: number, h: number) => {
+  onResize = (item: LayoutItem, w: number, h: number, direction: string) => {
     const { layouts } = this.state;
     const { cols, compactType, preventCollision } = this.props;
     const [newLayouts, l] = withLayoutItem(layouts, item.i, (l) => {
@@ -526,6 +527,10 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       }
 
       if (!hasCollisions) {
+        // Set new x when handle is w and w has changed (drag to left)
+        if (direction === 'w' && l.w !== w) {
+          l.x = l.x - (w - l.w);
+        }
         // Set new width and height.
         l.w = w;
         l.h = h;
@@ -542,7 +547,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     this.setState({
       layouts: compact(newLayouts, compactType, cols),
       placeholder: {
-        w: l.w,
+        w: direction === 'w' ? l.w : Math.round(l.w),
         h: l.h,
         x: l.x,
         y: l.y,
@@ -552,9 +557,15 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     });
   };
 
-  onResizeStop = () => {
+  onResizeStop = (item: LayoutItem) => {
     const { layouts, oldLayouts } = this.state;
     const { cols, compactType, onResizeStop } = this.props;
+    withLayoutItem(layouts, item.i, (l) => {
+      l.w = Math.round(l.w);
+      l.x = Math.round(l.x);
+      return l;
+    });
+
     const newLayouts = compact(layouts, compactType, cols);
 
     this.onLayoutMaybeChanged(newLayouts, oldLayouts);
@@ -583,10 +594,11 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     if (!placeholder) {
       return null;
     }
-
+    const { layouts } = this.state;
     const { i, x, y } = placeholder;
     const positionParams = this.getPositionParams();
-    const { w, h } = getWH(placeholder, this.getPositionParams());
+    const leftSpacing = calcLeftSpacing(layouts, placeholder);
+    const { w, h } = getWH(placeholder, this.getPositionParams(), leftSpacing);
     const position = calcGridItemPosition(positionParams, x, y, w, h);
 
     return <div key={i} className={`${prefixCls}-placeholder`} style={setTransform(position)} />;
@@ -618,6 +630,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
         <Item
           key={l.i}
           type={this.group}
+          leftSpacing={calcLeftSpacing(layouts, item)}
           data={getLayoutItem(layouts, l.i)}
           placeholder={l.i === placeholder?.i}
           isDragging={!!this.state.draggingItem}
@@ -686,7 +699,7 @@ Layout.defaultProps = {
   droppingItem: DEFAULT_DROPPINGITEM,
   preventCollision: false,
   compactType: 'vertical',
-  resizeHandles: ['se'],
+  resizeHandles: ['se', 'w', 'e', 'n', 's'],
 };
 
 export default Layout;
