@@ -121,6 +121,7 @@ export type Size = {
 
 export type ItemStates = {
   resizing: Size;
+  direction: string;
 };
 
 export type CompactType = 'horizontal' | 'vertical';

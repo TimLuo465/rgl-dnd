@@ -27,6 +27,7 @@ const getPosition = (data: LayoutItem, positionParams: PositionParams, state: It
 export default class Item extends PureComponent<ItemProps, ItemStates> {
   state: ItemStates = {
     resizing: null,
+    direction: '',
   };
 
   pickProps(props: ItemProps) {
@@ -47,6 +48,11 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
     const { data, leftSpacing } = this.props;
     const { size, handle } = callbackData;
 
+    if (evtType === 'onResizeStart') {
+      this.setState({ direction: handle });
+    } else if (evtType === 'onResizeStop') {
+      this.setState({ direction: '' });
+    }
     const positionParams = getPositionParams(this.props);
     let { w, h } = calcWH(positionParams, size.width, size.height, data.x, data.y, leftSpacing);
     const item = {
@@ -94,16 +100,21 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
       placeholder,
       ...restProps
     } = this.props;
-    const { resizing } = this.state;
+    const { resizing, direction } = this.state;
     const positionParams = getPositionParams(this.props);
     const position = getPosition(data, positionParams, this.state);
     const _style: any = { style: { ...style, ...position, ...resizing } };
     const { width: minWidth } = calcGridItemPosition(positionParams, 0, 0, 1, 0);
+
+    let calcOffset = leftSpacing;
+    if (direction === 'e' || direction === 'se') {
+      calcOffset = 0;
+    }
     const { width: maxWidth } = calcGridItemPosition(
       positionParams,
       0,
       0,
-      cols - data.x + leftSpacing,
+      cols - data.x + calcOffset,
       0
     );
 
