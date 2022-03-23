@@ -56,7 +56,7 @@ type GroupLayouts = {
 };
 
 /** All layout instance by group */
-let groupLayouts: GroupLayouts = {};
+const groupLayouts: GroupLayouts = {};
 /** default accept */
 let groupKeys = [];
 /** group index for default group */
@@ -68,9 +68,12 @@ let groupIndex = 0;
 let hoveredGroups = [];
 
 class Layout extends React.Component<LayoutProps, LayoutStates> {
-  group: string = '';
-  mounted: boolean = false;
+  group = '';
+
+  mounted = false;
+
   event: EventEmitter<InternalEventType> = new EventEmitter<InternalEventType>();
+
   containerRef: React.RefObject<HTMLDivElement> = React.createRef();
 
   /** The lastest parent node with scrollbar */
@@ -85,7 +88,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
     this.group = group || `${DEFAULT_GROUP}_${groupIndex}`;
 
-    groupIndex = groupIndex + 1;
+    groupIndex += 1;
     // cache the layout instance for mutli group
     groupLayouts[this.group] = this;
     groupKeys = Object.keys(groupLayouts);
@@ -365,14 +368,14 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
    * or move group item to other group layout
    */
   moveGroupItem(item: DragItem, offset: XYCoord, itemType: string): LayoutItem {
-    const group = this.group;
+    const { group } = this;
     const { layouts, oldLayouts } = this.state;
     let layoutItem = getLayoutItem(layouts, item.i);
 
     // drag group item to other group
     if (!layoutItem) {
       if (itemType !== group) {
-        const props = groupLayouts[itemType].props;
+        const { props } = groupLayouts[itemType];
 
         layoutItem = {
           ...calcLayoutByProps(item as LayoutItem, this.props, props),
@@ -529,7 +532,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       if (!hasCollisions) {
         // Set new x when handle is w and w has changed (drag to left)
         if (direction === 'w' && l.w !== w) {
-          l.x = l.x - (w - l.w);
+          l.x -= w - l.w;
         }
         // Set new width and height.
         l.w = w;
@@ -637,6 +640,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
           {...this.getPositionParams()}
           className={child.props.className}
           onClick={child.props.onClick}
+          onMouseEnter={child.props.onMouseEnter}
+          onMouseLeave={child.props.onMouseLeave}
           resizeHandles={resizeHandles}
           onDragEnd={this.onDragEnd}
           onDragStart={this.onDragStart}
@@ -648,6 +653,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
             ...child.props,
             // move child className to item
             className: '',
+            onMouseEnter: undefined,
+            onMouseLeave: undefined,
           })}
         </Item>
       );
