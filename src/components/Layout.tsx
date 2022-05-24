@@ -474,6 +474,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   }
 
   onCardItemDragEnd = (item: DragItem, didDrop: boolean, itemType: string) => {
+    const { allowOutBoundedDrop } = this.props;
     const { layouts, oldLayouts, draggingItem } = this.state;
 
     if (!draggingItem) {
@@ -481,7 +482,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     }
 
     // did not drop on layout
-    if (!didDrop) {
+    if (!allowOutBoundedDrop && !didDrop) {
       const index = layouts.findIndex((l) => l.i === draggingItem.i);
 
       if (index > -1) {
@@ -707,6 +708,7 @@ Layout.defaultProps = {
   preventCollision: false,
   compactType: 'vertical',
   resizeHandles: ['se', 'w', 'e', 'n', 's'],
+  allowOutBoundedDrop: true,
 };
 
 export default Layout;

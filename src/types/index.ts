@@ -60,6 +60,8 @@ export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
   droppingItem?: DroppingItem;
   preventCollision?: boolean;
   compactType?: CompactType;
+  /** 组件拖动的时候超出设计器区域之外时总是被禁止,不会触发onDrop事件，默认true */
+  allowOutBoundedDrop?: boolean;
   onLayoutChange?: (layouts: LayoutItem[], isUserAction: boolean) => void;
   onDragStart?: (layoutItem: LayoutItem) => void;
   onDragOver?: (layoutItem: LayoutItem) => void;
