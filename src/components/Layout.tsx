@@ -144,7 +144,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
         layouts: reLayout(layouts, compactType, cols),
       };
     }
-    return _layouts;
+    return null;
   }
 
   componentDidMount() {
