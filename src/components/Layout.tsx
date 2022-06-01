@@ -484,24 +484,39 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       return;
     }
 
-    // 判断是否是新增以及是否允许超出边界拖入
-    const allowDrop =
-      allowOutBoundedDrop && !oldLayouts.find((layout) => layout.i === draggingItem.i);
+    if (!didDrop) {
+      // 判断是否是新增以及是否允许超出边界拖入
+      if (allowOutBoundedDrop) {
+        const isDrop = !oldLayouts.find((layout) => layout.i === draggingItem.i);
 
-    // did not drop on layout
-    if (!allowDrop && !didDrop) {
+        if (isDrop) {
+          this.onDrop(item, itemType);
+        } else {
+          this.setState({
+            draggingItem: null,
+            placeholder: null,
+            prevPosition: null,
+            layouts: cloneLayouts(layouts),
+            oldLayouts: cloneLayouts(layouts),
+          });
+
+          this.onLayoutMaybeChanged(cloneLayouts(layouts), oldLayouts);
+        }
+
+        return;
+      }
+
       const index = layouts.findIndex((l) => l.i === draggingItem.i);
 
       if (index > -1) {
+        layouts.splice(index, 1);
+
         this.setState({
           draggingItem: null,
           placeholder: null,
           prevPosition: null,
-          layouts: cloneLayouts(layouts),
-          oldLayouts: cloneLayouts(layouts),
+          layouts: cloneLayouts(oldLayouts),
         });
-
-        this.onLayoutMaybeChanged(cloneLayouts(layouts), oldLayouts);
       }
     } else {
       // drop on layout, but not emit onDrop
