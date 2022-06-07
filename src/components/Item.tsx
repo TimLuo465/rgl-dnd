@@ -137,7 +137,7 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
         <Draggable
           type={type}
           data={data}
-          draggable={data.static !== true}
+          draggable={data.static !== true && data.draggable !== false}
           onDragEnd={onDragEnd}
           onDragStart={onDragStart}
         >

@@ -306,6 +306,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     }
 
     const { preventCollision, compactType, cols } = this.props;
+
     const newLayouts = moveElement(
       layouts,
       layoutItem,
@@ -316,6 +317,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       compactType,
       cols
     );
+
     const compactedLayout = compact(newLayouts, compactType, cols);
     const compactedItem = getLayoutItem(compactedLayout, layoutItem.i);
 
@@ -450,6 +452,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       this.setState({
         layouts: this.state.oldLayouts,
       });
+
       this.resetDraggingState(item.i);
     }
   };
@@ -481,8 +484,28 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       return;
     }
 
-    // did not drop on layout
-    if (!allowOutBoundedDrop && !didDrop) {
+    if (!didDrop) {
+      // 判断是否是新增以及是否允许超出边界拖入
+      if (allowOutBoundedDrop) {
+        const isDrop = !oldLayouts.find((layout) => layout.i === draggingItem.i);
+
+        if (isDrop) {
+          this.onDrop(item, itemType);
+        } else {
+          this.setState({
+            draggingItem: null,
+            placeholder: null,
+            prevPosition: null,
+            layouts: cloneLayouts(layouts),
+            oldLayouts: cloneLayouts(layouts),
+          });
+
+          this.onLayoutMaybeChanged(cloneLayouts(layouts), oldLayouts);
+        }
+
+        return;
+      }
+
       const index = layouts.findIndex((l) => l.i === draggingItem.i);
 
       if (index > -1) {
