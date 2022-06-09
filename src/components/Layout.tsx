@@ -41,7 +41,6 @@ interface LayoutStates {
   offset: DOMRect | null;
   accept: string[];
   layouts: LayoutItem[];
-  oldLayouts: LayoutItem[] | null;
   containerWidth: number;
   /** for resizing */
   placeholder: LayoutItem | null;
@@ -78,6 +77,9 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
   /** The lastest parent node with scrollbar */
   scrollbar: HTMLElement | null = null;
+
+  // 调整成组件属性，onDragStart 时不再触发组件更新
+  oldLayouts: LayoutItem[] | null;
 
   static defaultProps: LayoutProps;
 
@@ -118,9 +120,10 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       });
     }
 
+    this.oldLayouts = reLayout(layouts, compactType, cols);
+
     this.state = {
       layouts: reLayout(layouts, compactType, cols),
-      oldLayouts: reLayout(layouts, compactType, cols),
       offset: null,
       accept: groupKeys,
       containerWidth: 0,
@@ -181,12 +184,12 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   }
 
   // isUserAction - if true, it maybe drop, resize or swap, if false, it maybe correctBounds
-  onLayoutMaybeChanged(newLayouts: LayoutItem[], oldLayouts?: LayoutItem[], isUserAction = true) {
-    if (!oldLayouts) {
-      oldLayouts = cloneLayouts(this.state.layouts);
+  onLayoutMaybeChanged(newLayouts: LayoutItem[], _oldLayouts?: LayoutItem[], isUserAction = true) {
+    if (!_oldLayouts) {
+      _oldLayouts = cloneLayouts(this.state.layouts);
     }
 
-    const equal = isEqual(oldLayouts, newLayouts);
+    const equal = isEqual(_oldLayouts, newLayouts);
 
     if (!equal) {
       this.props.onLayoutChange?.(cloneLayouts(newLayouts), isUserAction);
@@ -250,17 +253,15 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   };
 
   hover = (item: DragItem, offset: XYCoord, itemType: string) => {
-    const { layouts, oldLayouts } = this.state;
+    const { layouts } = this.state;
     let layoutItem: LayoutItem | null = null;
 
     if (!this.scrollbar) {
       this.scrollbar = getScrollbar(this.containerRef.current);
     }
 
-    if (!oldLayouts) {
-      this.setState({
-        oldLayouts: cloneLayouts(layouts),
-      });
+    if (!this.oldLayouts) {
+      this.oldLayouts = cloneLayouts(layouts);
     }
 
     if (hoveredGroups.indexOf(this.group) === -1) {
@@ -371,7 +372,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
    */
   moveGroupItem(item: DragItem, offset: XYCoord, itemType: string): LayoutItem {
     const { group } = this;
-    const { layouts, oldLayouts } = this.state;
+    const { layouts } = this.state;
     let layoutItem = getLayoutItem(layouts, item.i);
 
     // drag group item to other group
@@ -389,7 +390,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
         this.removeOtherGroupItem(layoutItem, itemType);
       } else {
         // prevent oldLayouts be changed
-        layoutItem = getLayoutItem(cloneLayouts(oldLayouts), item.i);
+        layoutItem = getLayoutItem(cloneLayouts(this.oldLayouts), item.i);
       }
 
       layouts.push(layoutItem);
@@ -402,7 +403,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   }
 
   onDrop = (dragItem: DragItem, itemType: string) => {
-    const { draggingItem, layouts, oldLayouts } = this.state;
+    const { draggingItem, layouts } = this.state;
     const index = layouts.findIndex((l) => l.i === draggingItem.i);
     const layoutItem = layouts[index];
 
@@ -410,7 +411,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
     // group layout change
     if (itemType === this.group) {
-      this.onLayoutMaybeChanged(layouts, oldLayouts);
+      this.onLayoutMaybeChanged(layouts, this.oldLayouts);
     } else {
       // new card item or other group item
       const index = layouts.findIndex((l) => l.i === draggingItem.i);
@@ -422,7 +423,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
       // item from other layout
       if (sourceLayout) {
-        const { layouts: sourceLayouts, oldLayouts: sourceOldLayouts } = sourceLayout.state;
+        const { layouts: sourceLayouts } = sourceLayout.state;
+        const { oldLayouts: sourceOldLayouts } = sourceLayout;
         // trigger change for the moved dragitem
         sourceLayout.onLayoutMaybeChanged(sourceLayouts, sourceOldLayouts);
       }
@@ -433,15 +435,13 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   };
 
   onDragStart = (dragItem: DragItem) => {
-    const { layouts, oldLayouts } = this.state;
+    const { layouts } = this.state;
     const layoutItem = getLayoutItem(layouts, dragItem.i);
 
     this.props.onDragStart?.(layoutItem);
 
-    if (!oldLayouts || !isEqual(oldLayouts, layouts)) {
-      this.setState({
-        oldLayouts: cloneLayouts(layouts),
-      });
+    if (!this.oldLayouts || !isEqual(this.oldLayouts, layouts)) {
+      this.oldLayouts = cloneLayouts(layouts);
     }
   };
 
@@ -453,7 +453,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
     if (this.isGroupItem(itemType)) {
       this.setState({
-        layouts: cloneLayouts(this.state.oldLayouts),
+        layouts: cloneLayouts(this.oldLayouts),
       });
 
       this.resetDraggingState(item.i);
@@ -474,14 +474,14 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       draggingItem: null,
       placeholder: null,
       prevPosition: null,
-      oldLayouts: null,
     });
+    this.oldLayouts = null;
     this.scrollbar = null;
   }
 
   onCardItemDragEnd = (item: DragItem, didDrop: boolean, itemType: string) => {
     const { allowOutBoundedDrop } = this.props;
-    const { layouts, oldLayouts, draggingItem } = this.state;
+    const { layouts, draggingItem } = this.state;
 
     if (!draggingItem) {
       return;
@@ -490,7 +490,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     if (!didDrop) {
       // 判断是否是新增以及是否允许超出边界拖入
       if (allowOutBoundedDrop) {
-        const isDrop = !oldLayouts.find((layout) => layout.i === draggingItem.i);
+        const isDrop = !this.oldLayouts.find((layout) => layout.i === draggingItem.i);
 
         if (isDrop) {
           this.onDrop(item, itemType);
@@ -500,10 +500,11 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
             placeholder: null,
             prevPosition: null,
             layouts: cloneLayouts(layouts),
-            oldLayouts: cloneLayouts(layouts),
           });
 
-          this.onLayoutMaybeChanged(cloneLayouts(layouts), oldLayouts);
+          this.oldLayouts = cloneLayouts(layouts);
+
+          this.onLayoutMaybeChanged(cloneLayouts(layouts), this.oldLayouts);
         }
 
         return;
@@ -518,7 +519,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
           draggingItem: null,
           placeholder: null,
           prevPosition: null,
-          layouts: cloneLayouts(oldLayouts),
+          layouts: cloneLayouts(this.oldLayouts),
         });
       }
     } else {
@@ -588,7 +589,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   };
 
   onResizeStop = (item: LayoutItem) => {
-    const { layouts, oldLayouts } = this.state;
+    const { layouts } = this.state;
     const { cols, compactType, onResizeStop } = this.props;
     withLayoutItem(layouts, item.i, (l) => {
       l.w = Math.round(l.w);
@@ -598,13 +599,14 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
     const newLayouts = compact(layouts, compactType, cols);
 
-    this.onLayoutMaybeChanged(newLayouts, oldLayouts);
-    onResizeStop?.(newLayouts);
+    if (!isEqual(newLayouts, layouts)) {
+      this.setState({ layouts: newLayouts, placeholder: null });
+    } else {
+      this.setState({ placeholder: null });
+    }
 
-    this.setState({
-      placeholder: null,
-      layouts: newLayouts,
-    });
+    this.onLayoutMaybeChanged(newLayouts, this.oldLayouts);
+    onResizeStop?.(newLayouts);
   };
 
   getPositionParams = () => {
