@@ -76,7 +76,7 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
 
   onResize = throttle((e: SyntheticEvent, callbackData: ResizeCallbackData) => {
     this.handleResize(e, callbackData, 'onResize');
-  }, 20);
+  }, 1 / 60);
 
   onResizeStop = (e: SyntheticEvent, callbackData: ResizeCallbackData) => {
     this.handleResize(e, callbackData, 'onResizeStop');
