@@ -1,3 +1,4 @@
+import throttle from 'lodash.throttle';
 import React, { PureComponent, SyntheticEvent } from 'react';
 import { ResizableBox, ResizeCallbackData } from 'react-resizable';
 import { prefixCls } from '../constants';
@@ -54,7 +55,7 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
       this.setState({ direction: '' });
     }
     const positionParams = getPositionParams(this.props);
-    let { w, h } = calcWH(positionParams, size.width, size.height, data.x, data.y, leftSpacing);
+    const { w, h } = calcWH(positionParams, size.width, size.height, data.x, data.y, leftSpacing);
     const item = {
       ...data,
       w,
@@ -72,9 +73,11 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
   onResizeStart = (e: SyntheticEvent, callbackData: ResizeCallbackData) => {
     this.handleResize(e, callbackData, 'onResizeStart');
   };
-  onResize = (e: SyntheticEvent, callbackData: ResizeCallbackData) => {
+
+  onResize = throttle((e: SyntheticEvent, callbackData: ResizeCallbackData) => {
     this.handleResize(e, callbackData, 'onResize');
-  };
+  }, 200);
+
   onResizeStop = (e: SyntheticEvent, callbackData: ResizeCallbackData) => {
     this.handleResize(e, callbackData, 'onResizeStop');
   };

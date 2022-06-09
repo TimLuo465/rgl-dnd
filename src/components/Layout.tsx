@@ -120,7 +120,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
     this.state = {
       layouts: reLayout(layouts, compactType, cols),
-      oldLayouts: null,
+      oldLayouts: reLayout(layouts, compactType, cols),
       offset: null,
       accept: groupKeys,
       containerWidth: 0,
@@ -183,7 +183,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   // isUserAction - if true, it maybe drop, resize or swap, if false, it maybe correctBounds
   onLayoutMaybeChanged(newLayouts: LayoutItem[], oldLayouts?: LayoutItem[], isUserAction = true) {
     if (!oldLayouts) {
-      oldLayouts = this.state.layouts;
+      oldLayouts = cloneLayouts(this.state.layouts);
     }
 
     const equal = isEqual(oldLayouts, newLayouts);
@@ -433,13 +433,16 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   };
 
   onDragStart = (dragItem: DragItem) => {
-    const { layouts } = this.state;
+    const { layouts, oldLayouts } = this.state;
     const layoutItem = getLayoutItem(layouts, dragItem.i);
 
     this.props.onDragStart?.(layoutItem);
-    this.setState({
-      oldLayouts: cloneLayouts(layouts),
-    });
+
+    if (!oldLayouts || !isEqual(oldLayouts, layouts)) {
+      this.setState({
+        oldLayouts: cloneLayouts(layouts),
+      });
+    }
   };
 
   onDragEnd = (item: LayoutItem, didDrop: boolean, itemType: string) => {
@@ -450,7 +453,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
     if (this.isGroupItem(itemType)) {
       this.setState({
-        layouts: this.state.oldLayouts,
+        layouts: cloneLayouts(this.state.oldLayouts),
       });
 
       this.resetDraggingState(item.i);
@@ -597,9 +600,9 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
     this.onLayoutMaybeChanged(newLayouts, oldLayouts);
     onResizeStop?.(newLayouts);
+
     this.setState({
       placeholder: null,
-      oldLayouts: null,
       layouts: newLayouts,
     });
   };
