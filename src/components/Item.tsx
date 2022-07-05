@@ -48,6 +48,7 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
   ) => {
     const { data, leftSpacing } = this.props;
     const { size, handle } = callbackData;
+    const { direction } = this.state;
 
     if (evtType === 'onResizeStart') {
       this.setState({ direction: handle });
@@ -65,6 +66,14 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
 
     e.preventDefault();
     e.stopPropagation();
+
+    // 上下拖拽时，确保w不变
+    if (direction === 'w' || direction === 's') {
+      wh.w = data.w;
+      // 左右拖拽时，确保h不变
+    } else if (direction === 'e' || direction === 'n') {
+      wh.h = data.h;
+    }
 
     this.setResizing(evtType === 'onResizeStop' ? null : size);
     this.props[evtType]?.(data, wh.w, wh.h, handle);
