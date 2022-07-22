@@ -10,16 +10,24 @@ export interface DragItem {
 
 export interface LayoutItem extends DragItem {
   i: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
   minW?: number;
   maxW?: number;
   minH?: number;
   maxH?: number;
   placeholder?: boolean;
+  isContainer?: boolean;
+  children?: LayoutItem[];
 }
+
+// export interface FlowLayoutItem {
+//   i: string;
+//   children?: FlowLayoutItem[];
+//   [key: string]: any;
+// }
 
 export interface DroppingItem {
   i: string;
@@ -62,6 +70,7 @@ export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
   compactType?: CompactType;
   /** 组件拖动的时候超出设计器区域之外时总是被禁止,不会触发onDrop事件，默认true */
   allowOutBoundedDrop?: boolean;
+  isResetLayout?: boolean;
   onLayoutChange?: (layouts: LayoutItem[], isUserAction: boolean) => void;
   onDragStart?: (layoutItem: LayoutItem) => void;
   onDragOver?: (layoutItem: LayoutItem) => void;
@@ -72,6 +81,14 @@ export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
     dragInfo: DragInfo,
     group: string
   ) => void;
+}
+
+export interface FlowLayoutProps {
+  [key: string]: any;
+}
+
+export interface FlowLayoutItemProps {
+  [key: string]: any;
 }
 
 export type PositionParams = {

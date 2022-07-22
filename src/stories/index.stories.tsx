@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CSSProperties } from 'styled-components';
-import { Draggable, Layout, Provider } from '..';
+import { Draggable, FlowLayout, Layout, Provider } from '..';
 import { DEFAULT_GROUP } from '../constants';
 import { LayoutItem } from '../types';
+import { checkArray } from '../utils';
 
 export default {
   title: 'rgl-dnd',
@@ -19,13 +20,78 @@ const mockLayouts = [
     selected: false,
     minH: 3,
     minW: 1,
+    plachodler: true,
+  },
+  {
+    i: 'a3987f12300f452289c74e0d87893561',
+    x: 0,
+    y: 0,
+    w: 12,
+    h: 24,
+    scope: '',
+    selected: false,
+    minH: 3,
+    minW: 1,
+    isContainer: true,
+    children: [
+      {
+        i: '12345678976543',
+        parentId: 'a3987f12300f452289c74e0d87893561',
+      },
+      {
+        i: '8765434567',
+        parentId: 'a3987f12300f452289c74e0d87893561',
+      },
+    ],
   },
 ];
+
+const mockFlowLayouts = [
+  {
+    i: (Math.random() * 1000000).toString(),
+    nodeId: '111',
+    type: 'flow-container',
+    isContainer: true,
+    parentId: 'ROOT',
+    children: [
+      {
+        i: (Math.random() * 1000000).toString(),
+        nodeId: '1112',
+        type: 'com',
+        parentId: '111',
+      },
+      {
+        i: (Math.random() * 1000000).toString(),
+        nodeId: '1112',
+        type: 'com',
+        parentId: '111',
+      },
+      {
+        i: (Math.random() * 1000000).toString(),
+        nodeId: '1113',
+        type: 'flow-container',
+        isContainer: true,
+        parentId: '111',
+        children: [
+          {
+            i: (Math.random() * 1000000).toString(),
+            nodeId: '11133',
+            type: 'com',
+            parentId: '1113',
+          },
+        ],
+      },
+    ],
+  },
+];
+
+let comKey = '11';
+
 const containerStyle: CSSProperties = {
   float: 'left',
   width: '49%',
   border: '1px solid #000',
-  height: 400,
+  height: 700,
   overflow: 'auto',
 };
 
@@ -36,6 +102,8 @@ const Item: React.FC = () => {
 };
 export const Default: React.FC = () => {
   const [layouts, setLayouts] = useState<LayoutItem[]>(mockLayouts);
+  const [flowLayouts, setFlowLayouts] = useState<any>(mockFlowLayouts);
+  const [isResetLayout, setIsResetLayout] = useState<boolean>(false);
   const [clsName, setClsName] = useState<string>('');
   const ref1 = useRef(null);
   const [layouts2, setLayouts2] = useState<LayoutItem[]>([
@@ -43,9 +111,14 @@ export const Default: React.FC = () => {
     { i: '4', x: 2, y: 0, w: 2, h: 20 },
   ]);
   const [layouts3, setLayouts3] = useState<LayoutItem[]>([]);
+  const mockFlowDroppingItem = {
+    i: (Math.random() * 1000000).toString(),
+    nodeId: 'sdaf',
+  };
+
   const droppingItem = {
-    i: new Date().getTime().toString(),
-    w: 1,
+    i: (Math.random() * 1000000).toString() + new Date().getTime(),
+    w: 2,
     h: 10,
     minW: 12,
   };
@@ -61,17 +134,101 @@ export const Default: React.FC = () => {
     layouts2.splice(index, 1);
     setLayouts2(layouts2.slice());
   };
-  const renderItem1 = useCallback((item) => {
+
+  const renderFlowLayoutItem = (item) => {
     return (
-      <div className="kkk" data-grid={item}>
+      <div
+        data-grid={item}
+        data-flow={item}
+        key={item.i}
+        style={{ border: '1px solid #ddd', height: '60px' }}
+      >
         {item.i.substring(1, 5)}
-        <button onClick={() => deleteItem1(item.i)}>delete</button>
+        <a href="">{item.i.substring(1, 5)}</a>
+        {renderFlowLayout(item.children)}
       </div>
     );
-  }, []);
+  };
+
+  const EmptyContainer = () => {
+    return <div style={{ height: '60px', border: '1px dashed #ccc' }}>请拖入组件</div>;
+  };
+
+  const onMouseEnter = () => {
+    setIsResetLayout(true);
+  };
+  const onMouseLeave = () => {
+    setIsResetLayout(false);
+  };
+
+  const onFlowLayoutHover = () => {
+    if (isResetLayout) return;
+    setIsResetLayout(true);
+  };
+
+  const renderFlowLayout = (data) => {
+    if (!checkArray(data)) return;
+    return data.map((item) => {
+      if (item.isContainer) {
+        return (
+          <div data-flow={item}>
+            <FlowLayout
+              layouts={layouts}
+              // layouts={flowLayouts}
+              layoutItem={item}
+              droppingItem={droppingItem}
+              onDrop={onFlowLayoutDrop}
+              empty={!Array.isArray(item.children) || !item.children.length}
+            >
+              {renderFlowLayout(item.children)}
+            </FlowLayout>
+          </div>
+        );
+      }
+      return renderFlowLayoutItem(item);
+    });
+  };
+  const renderItem1 = useCallback(
+    (item) => {
+      if (item.isContainer) {
+        return (
+          <div data-grid={item}>
+            <FlowLayout
+              layouts={layouts}
+              // layouts={flowLayouts}
+              layoutItem={item}
+              droppingItem={droppingItem}
+              empty={!Array.isArray(item.children) || !item.children.length}
+              onDrop={onFlowLayoutDrop}
+              onHover={onFlowLayoutHover}
+              // key={comKey}
+            >
+              {renderFlowLayout(item.children)}
+            </FlowLayout>
+          </div>
+        );
+      }
+      return (
+        <div className="kkk" data-grid={item} key={item.i}>
+          {item.i.substring(1, 5)}
+          <button onClick={() => deleteItem1(item.i)}>delete</button>
+        </div>
+      );
+    },
+    [layouts]
+  );
   const onDrop1 = (_layouts, layoutItem, dragInfo, group) => {
+    // console.log('gridDrop', _layouts, layoutItem, dragInfo, group);
     if (dragInfo.type !== group) {
       layouts.push(layoutItem);
+      if (layoutItem?.parentId) {
+        const index = layouts.findIndex((item) => item.i === layoutItem?.parentId);
+        if (index > -1) {
+          layouts[index].children = layouts[index].children.filter(
+            (child) => child.i !== layoutItem.i
+          );
+        }
+      }
       setLayouts(layouts.slice());
     }
   };
@@ -114,7 +271,7 @@ export const Default: React.FC = () => {
           </div>
         );
       }
-      console.log('render item');
+      // console.log('render item');
       return (
         <div
           className={clsName}
@@ -142,16 +299,26 @@ export const Default: React.FC = () => {
     ref1.current.resize();
   }, []);
 
+  const onFlowLayoutDrop = (layouts: any, layoutItem: any) => {
+    // console.log(layouts, layoutItem, 'flwo-drop');
+    const newLayouts = layouts.filter((item) => item.i !== layoutItem.i);
+    // console.log(newLayouts, '============');
+    setLayouts(newLayouts);
+    // comKey = Math.random().toString();
+    // setFlowLayouts(layouts);
+  };
+
   return (
     <Provider>
       <Draggable onDragStart={console.log} onDragEnd={console.log}>
         <div>Box1</div>
       </Draggable>
       <Draggable>Box2</Draggable>
+      <Draggable>Box3</Draggable>
       <div style={{ marginBottom: 20 }}>
         <button onClick={onClick}>change Layout</button>
       </div>
-      <div style={containerStyle}>
+      <div style={containerStyle} id="grid-layout">
         <Layout
           style={{ minHeight: '100%' }}
           layouts={layouts}
@@ -164,14 +331,14 @@ export const Default: React.FC = () => {
             delete l.minW;
           }}
           onLayoutChange={(layouts) => {
-            console.log('change');
+            // console.log('onLayoutChange', layouts);
             setLayouts(layouts);
           }}
         >
           {layouts.map((item) => renderItem1(item))}
         </Layout>
       </div>
-      <div style={containerStyle}>
+      {/* <div style={containerStyle}>
         <Layout
           style={{ minHeight: '100%' }}
           droppingItem={droppingItem}
@@ -190,6 +357,9 @@ export const Default: React.FC = () => {
         >
           {layouts2.map((item) => renderItem2(item))}
         </Layout>
+      </div> */}
+      <div style={containerStyle} id="aaa">
+        {renderFlowLayout(flowLayouts)}
       </div>
     </Provider>
   );

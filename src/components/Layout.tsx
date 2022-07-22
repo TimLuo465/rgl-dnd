@@ -67,6 +67,7 @@ let groupIndex = 0;
 let hoveredGroups = [];
 
 class Layout extends React.Component<LayoutProps, LayoutStates> {
+  isOverFlowLayout = false;
   group = '';
 
   mounted = false;
@@ -163,6 +164,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     this.mounted = true;
     window.addEventListener('resize', this.resize);
     event.on('dragEnd.cardItem', this.onCardItemDragEnd);
+    event.on('overFlowLayout', this.overFlowLayout);
     this.onLayoutMaybeChanged(this.state.layouts, this.props.layouts, false);
     this.event.emit('mounted');
   }
@@ -181,7 +183,18 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     delete groupLayouts[this.group];
     window.removeEventListener('resize', this.resize);
     event.off('dragEnd.cardItem', this.onCardItemDragEnd);
+    event.off('overFlowLayout', this.overFlowLayout);
   }
+
+  overFlowLayout = () => {
+    if (this.isOverFlowLayout) return;
+    this.isOverFlowLayout = true;
+    const { draggingItem } = this.state;
+    console.log(draggingItem, '=====');
+    if (draggingItem) {
+      this.resetDraggingState(draggingItem.i);
+    }
+  };
 
   // isUserAction - if true, it maybe drop, resize or swap, if false, it maybe correctBounds
   onLayoutMaybeChanged(newLayouts: LayoutItem[], _oldLayouts?: LayoutItem[], isUserAction = true) {
@@ -253,6 +266,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   };
 
   hover = (item: DragItem, offset: XYCoord, itemType: string) => {
+    event.emit('overLayout');
+    this.isOverFlowLayout = false;
     const { layouts } = this.state;
     let layoutItem: LayoutItem | null = null;
 
@@ -275,7 +290,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       // move card item
       layoutItem = this.moveCardItem(item, offset);
     }
-
+    layoutItem = null;
     if (layoutItem) {
       this.props.onDragOver?.(layoutItem);
     }
@@ -301,11 +316,9 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     const position = this.calcXY(layoutItem, offset);
 
     layoutItem.placeholder = true;
-
     if (position.x === prevPosition?.x && position.y === prevPosition?.y) {
       return;
     }
-
     const { preventCollision, compactType, cols } = this.props;
 
     const newLayouts = moveElement(
@@ -363,6 +376,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       this.moveItem(layoutItem, offset);
     }
 
+    layoutItem = null;
+
     return layoutItem;
   }
 
@@ -374,7 +389,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     const { group } = this;
     const { layouts } = this.state;
     let layoutItem = getLayoutItem(layouts, item.i);
-
     // drag group item to other group
     if (!layoutItem) {
       if (itemType !== group) {
@@ -403,7 +417,14 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   }
 
   onDrop = (dragItem: DragItem, itemType: string) => {
+    console.log('drop======00====');
+    // event.emit('layoutDrop', dragItem);
     const { draggingItem, layouts } = this.state;
+    if (dragItem && cloneLayouts(layouts).findIndex((l) => l.i === dragItem.i) === -1) {
+      console.log(111111);
+    }
+    // console.log(dragItem, draggingItem, 'drop');
+
     const index = layouts.findIndex((l) => l.i === draggingItem.i);
     const layoutItem = layouts[index];
 
@@ -431,6 +452,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     }
 
     this.resetDraggingState(draggingItem.i);
+
     this.props.onDrop?.(layouts, layoutItem, { item: dragItem, type: itemType }, this.group);
   };
 
@@ -482,7 +504,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   onCardItemDragEnd = (item: DragItem, didDrop: boolean, itemType: string) => {
     const { allowOutBoundedDrop } = this.props;
     const { layouts, draggingItem } = this.state;
-
     if (!draggingItem) {
       return;
     }
@@ -491,8 +512,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       // 判断是否是新增以及是否允许超出边界拖入
       if (allowOutBoundedDrop) {
         const isDrop = !this.oldLayouts.find((layout) => layout.i === draggingItem.i);
-
-        if (isDrop) {
+        console.log(isDrop, 'isDropisDrop');
+        if (isDrop && !this.isOverFlowLayout) {
           this.onDrop(item, itemType);
         } else {
           this.setState({
@@ -525,7 +546,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     } else {
       // drop on layout, but not emit onDrop
       // maybe nested layout, so trigger onDrop manual
-      this.onDrop(item, itemType);
+      !this.isOverFlowLayout && this.onDrop(item, itemType);
     }
   };
 
@@ -693,6 +714,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   render() {
     const { layouts, accept, placeholder } = this.state;
     const { style, margin, rowHeight, containerPadding, droppable, className } = this.props;
+
     const clsNameStr = `${prefixCls} ${className}`.trim();
     const containerStyle: CSSProperties = {
       height: getContainerHeight(layouts, {
@@ -703,6 +725,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       ...style,
     };
 
+    console.log(accept, '===========accept');
     return (
       <Droppable
         weId={this.group}

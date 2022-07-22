@@ -4,6 +4,7 @@ import { DroppableProps } from '../types';
 
 const Droppable: React.FC<DroppableProps> = (props) => {
   const { accept, children, canDrop, onDrop, onHover } = props;
+
   const [, connect] = useDrop(
     () => ({
       accept: canDrop ? accept : [],

@@ -22,7 +22,6 @@ const Draggable: React.FC<DraggableProps> = memo((props: DraggableProps) => {
       end(draggedItem: DragItem, monitor) {
         const didDrop = monitor.didDrop();
         const itemType = monitor.getItemType() as string;
-
         event.emit('dragEnd.cardItem', draggedItem, didDrop, itemType);
         onDragEnd?.(draggedItem, didDrop, itemType);
       },
@@ -41,7 +40,6 @@ const Draggable: React.FC<DraggableProps> = memo((props: DraggableProps) => {
       onDragStart?.(collected.item);
     }
   }, [isDragging]);
-
   if (typeof children === 'string') {
     return (
       <div ref={drag} style={style}>
