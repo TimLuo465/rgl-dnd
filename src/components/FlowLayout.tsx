@@ -16,10 +16,11 @@ import Droppable from './Droppable';
 import event from './event';
 import FlowLayoutItem from './FlowLayoutItem';
 
-// let flowContainer = null;
-
+const group = new Array(20).fill(1).map((item, index) => {
+  return `rgl-dnd-group_${index}`;
+});
 let indicator = {
-  index: 0,
+  index: -1,
   where: 'before',
 };
 
@@ -64,18 +65,17 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
     const Indicator = document.querySelector(`.${prefixCls}-indicator`) as HTMLElement;
     Indicator.style.display = 'none';
     indicator = {
-      index: 0,
+      index: -1,
       where: 'before',
     };
   };
 
   // drop时，更新layouts
   const handleDrop = (dragItem: LayoutItem, itemType: string) => {
-    // console.log('flow-layout-drop', dragItem);
     const newItem = moveCardItem();
     const newLayoutItem = JSON.parse(JSON.stringify(layoutItem));
     let newPreLayoutItem = JSON.parse(JSON.stringify(preLayoutItem));
-    const itemIndex = newLayoutItem.children.findIndex((item) => item.i === dragItem.i);
+    const itemIndex = newLayoutItem.children?.findIndex((item) => item.i === dragItem.i);
     if (itemIndex > -1) {
       newPreLayoutItem = null;
       // 如果dragover的下标和当前正在拖拽dragItem下标相同，则表示不需要更换位置，直接return
@@ -91,7 +91,6 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
         newLayoutItem.children.splice(insertIndex, 0, insertItem);
       }
     } else {
-      // console.log(2);
       // 正在拖拽的dragItem，不在当前flow-layout中，此时可能是新拖入的，也可能是别的flow-layout中拖入的
       if (checkArray(newLayoutItem.children)) {
         const insertIndex = indicator.where === 'before' ? indicator.index : indicator.index + 1;
@@ -103,7 +102,6 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
           newLayoutItem.children.splice(insertIndex, 0, newItem);
         }
       } else {
-        // console.log(333);
         // children属性不存在的情况，直接插入对应组件即可
         if (checkObject(dragItem)) {
           dragItem.parentId = newLayoutItem.i;
@@ -124,10 +122,20 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
   };
 
   const handleHover = (item: any, offset: any, itemType: string) => {
-    // console.log('flow-hover', item);
     if (!checkArray(layoutItem.children)) {
       const position = movePlaceholder(null, flowContainer);
       setIndicatorPosition(position);
+    } else {
+      if (indicator.index === -1) {
+        const index = flowContainer.childNodes.length - 1;
+        const el = flowContainer.childNodes[index];
+        const position = movePlaceholder({ el, where: 'after' });
+        setIndicatorPosition(position);
+        indicator = {
+          index: index,
+          where: 'after',
+        };
+      }
     }
     event.emit('overFlowLayout');
     onHover?.();
@@ -138,7 +146,6 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
   };
 
   const handleDragEnd = () => {
-    // console.log('33333333333333333333');
     preLayoutItem = null;
   };
 
@@ -163,6 +170,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
 
   const handleDragOver = (index?: number) => {
     return throttle((e) => {
+      // console.log('dragover----------', index);
       const { clientX: x, clientY: y } = e;
       const indicatorInfo = findPosition(e.target, getDOMInfo(e.target), x, y);
       const position = movePlaceholder(indicatorInfo);
@@ -175,6 +183,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
   };
 
   useEffect(() => {
+    // console.log(_layouts, '_layouts_layouts_layouts_layouts_layouts');
     setLayouts(_layouts);
     const dragOverhandlers = [];
     setFlowContainer(containerRef.current);
@@ -209,7 +218,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
     <Droppable
       canDrop={droppable}
       // accept={[DEFAULT_ITEMTYPE]}
-      accept={['rgl-dnd-group_0', 'rgl-dnd-card']}
+      accept={[...group, 'rgl-dnd-card']}
       onDrop={handleDrop}
       onHover={handleHover}
     >

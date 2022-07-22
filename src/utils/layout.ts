@@ -504,8 +504,8 @@ export function pickLayoutItem({ i, x, y, h, w }: LayoutItem) {
 }
 
 export function isEqual(layouts1: LayoutItem[], layouts2: LayoutItem[]) {
-  const s1 = layouts1.map(pickLayoutItem);
-  const s2 = layouts2.map(pickLayoutItem);
+  const s1 = layouts1?.map(pickLayoutItem);
+  const s2 = layouts2?.map(pickLayoutItem);
 
   return lodashEqual(s1, s2);
 }

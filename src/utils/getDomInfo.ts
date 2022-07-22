@@ -22,7 +22,7 @@ export const getDOMMargin = (dom: HTMLElement) => {
 
 export const getDOMInfo = (dom: HTMLElement) => {
   if (!dom) return;
-  const { x, y, top, left, bottom, right, width, height } = dom.getBoundingClientRect() as DOMRect;
+  const { x, y, top, left, bottom, right, width, height } = dom?.getBoundingClientRect() as DOMRect;
   const margin = getDOMMargin(dom),
     padding = getDOMPadding(dom);
 
