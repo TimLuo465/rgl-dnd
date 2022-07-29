@@ -5,7 +5,7 @@ type TransformStyle = {
   transform: string;
   WebkitTransform: string;
   width: number;
-  height: number;
+  height: number | 'auto';
 };
 
 export function setTransform({ top, left, width, height }: Position): TransformStyle {

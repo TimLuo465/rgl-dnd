@@ -1,12 +1,15 @@
 import throttle from 'lodash.throttle';
 import React, { PureComponent, SyntheticEvent } from 'react';
-import { ResizableBox, ResizeCallbackData } from 'react-resizable';
+import { ResizableBox, ResizeCallbackData, ResizeHandle } from 'react-resizable';
 import { prefixCls } from '../constants';
 import { ItemProps, ItemStates, LayoutItem, PositionParams, Size } from '../types';
 import { calcGridItemPosition, calcWH, getWH, setTransform } from '../utils';
 import Draggable from './Draggable';
 
 type ResizeEventType = 'onResizeStart' | 'onResize' | 'onResizeStop';
+
+// 如果是流式容器，默认只能左右拉伸
+const flowLayoutHandles: ResizeHandle[] = ['w', 'e'];
 
 const getPositionParams = (props: ItemProps) => {
   const { margin, containerPadding, cols, containerWidth, rowHeight, maxRows } = props;
@@ -114,8 +117,11 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
     } = this.props;
     const { resizing, direction } = this.state;
     const positionParams = getPositionParams(this.props);
+
     const position = getPosition(data, positionParams, this.state);
+
     const _style: any = { style: { ...style, ...position, ...resizing } };
+
     const { width: minWidth } = calcGridItemPosition(positionParams, 0, 0, 1, 0);
 
     let calcOffset = leftSpacing;
@@ -139,11 +145,11 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
         onResizeStart={this.onResizeStart}
         onResize={this.onResize}
         onResizeStop={this.onResizeStop}
-        resizeHandles={resizeHandles}
+        resizeHandles={data.isContainer ? flowLayoutHandles : resizeHandles}
         minConstraints={[minWidth, 10]}
         maxConstraints={[maxWidth, Infinity]}
-        className={`${prefixCls}-item${
-          isDragging && placeholder ? '-placeholder' : ''
+        className={`${prefixCls}-item${isDragging && placeholder ? '-placeholder' : ''} ${
+          data.autoHeight ? `${prefixCls}-autoheight` : ''
         } ${className}`.trim()}
       >
         <Draggable

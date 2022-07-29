@@ -70,7 +70,6 @@ export function calcGridItemPosition(
   const colWidth = calcGridColWidth(positionParams);
   const [top, , , left] = getContainerPadding(containerPadding);
   const out = {} as Position;
-
   // If resizing, use the exact width and height as returned from resizing callbacks.
   if (state && state.resizing) {
     out.width = Math.round(state.resizing.width);
@@ -161,6 +160,18 @@ export function calcWH(
   return { w, h };
 }
 
+export function calcH(positionParams: PositionParams, height: number, y: number): number {
+  const { margin, maxRows, rowHeight } = positionParams;
+
+  // Math.round will cause rowHeight not work well
+  // Math.round((height + margin[1]) / (rowHeight + margin[1]));
+  let h = (height + margin[1]) / (rowHeight + margin[1]);
+
+  // Capping
+  h = clamp(h, 0, maxRows - y);
+  return h;
+}
+
 /**
  * calculate layout szie when drag group item to another group
  */
@@ -181,7 +192,7 @@ export function calcLayoutByProps(
   };
 }
 
-export function calcLeftSpacing(layouts: LayoutItem[], item: LayoutItem,): number {
+export function calcLeftSpacing(layouts: LayoutItem[], item: LayoutItem): number {
   const leftItems = layouts.filter(
     (lay) =>
       lay.i !== item.i &&
@@ -192,7 +203,7 @@ export function calcLeftSpacing(layouts: LayoutItem[], item: LayoutItem,): numbe
 
   let leftBoundary = 0;
   leftItems.forEach((it) => {
-    leftBoundary = Math.max(it.x + it.w, leftBoundary)
+    leftBoundary = Math.max(it.x + it.w, leftBoundary);
   });
 
   return item.x - leftBoundary;

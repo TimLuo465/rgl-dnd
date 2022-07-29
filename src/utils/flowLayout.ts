@@ -1,3 +1,5 @@
+import { prefixCls } from '../constants';
+import { LayoutItem, LayoutItemType } from '../types';
 /**
  * 检查对象是否为空
  */
@@ -17,8 +19,13 @@ export const checkArray = (data: any) => {
 /**
  * 流式布局内组件更新后，获取新的layouts
  */
-export const getNewLayouts = (data: any[], layoutItem: any, preLayoutItem?: any) => {
-  if (!data || !Array.isArray(data)) return;
+export const getNewLayouts = (
+  data: LayoutItem[],
+  layoutItem: LayoutItem,
+  preLayoutItem?: LayoutItem
+) => {
+  if (!checkArray(data)) return data;
+
   const cloneData = JSON.parse(JSON.stringify(data));
   for (let index = 0; index < cloneData.length; index++) {
     let item = cloneData[index];
@@ -28,7 +35,7 @@ export const getNewLayouts = (data: any[], layoutItem: any, preLayoutItem?: any)
     if (item.i === preLayoutItem?.i) {
       item.children = preLayoutItem.children;
     }
-    if (item.children) {
+    if (checkArray(item.children)) {
       item.children = getNewLayouts(item.children, layoutItem, preLayoutItem);
     }
   }
@@ -36,21 +43,33 @@ export const getNewLayouts = (data: any[], layoutItem: any, preLayoutItem?: any)
 };
 
 /**
- * 获取当前正在拖拽的layoutItem
+ * 获取layoutItem
  */
-export const getFlowLayoutItem = (layouts: any, id: string) => {
-  let layoutItem: any = null;
+export const getFlowLayoutItem = (layouts: LayoutItemType[], id: string) => {
+  let layoutItem: LayoutItemType | null = null;
   for (let index = 0; index < layouts.length; index++) {
-    const item = layouts[index];
+    const item: LayoutItemType = layouts[index];
     if (item.i === id) {
       layoutItem = item;
       break;
     }
-    if (item.children && item.children.length) {
-      layoutItem = getFlowLayoutItem(item.children, id);
+    if (checkArray(item.children)) {
+      const tempItem = getFlowLayoutItem(item.children, id);
+      if (tempItem) {
+        layoutItem = tempItem;
+      }
     }
   }
   return layoutItem;
+};
+
+// 渲染指示线
+export const renderIndicator = () => {
+  const el = document.querySelector(`.${prefixCls}-indicator`);
+  if (el) return;
+  const Indicator = document.createElement('div');
+  Indicator.classList.add(`${prefixCls}-indicator`);
+  document.body.appendChild(Indicator);
 };
 
 export const isEventBlockedByDescendant = <K extends keyof HTMLElementEventMap>(
@@ -78,6 +97,7 @@ export const isEventBlockedByDescendant = <K extends keyof HTMLElementEventMap>(
   return false;
 };
 
+// 封装事件注册，添加阻止冒泡方法
 export const addRGLEventListener = <K extends keyof HTMLElementEventMap>(
   el: HTMLElement,
   eventName: K,

@@ -8,26 +8,29 @@ export interface DragItem {
   [key: string]: any;
 }
 
+export interface FlowLayoutItem {
+  i: string;
+  children?: FlowLayoutItem[];
+  [key: string]: any;
+}
+
 export interface LayoutItem extends DragItem {
   i: string;
-  x?: number;
-  y?: number;
-  w?: number;
-  h?: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
   minW?: number;
   maxW?: number;
   minH?: number;
   maxH?: number;
+  autoHeight?: boolean;
   placeholder?: boolean;
   isContainer?: boolean;
-  children?: LayoutItem[];
+  children?: FlowLayoutItem[];
 }
 
-// export interface FlowLayoutItem {
-//   i: string;
-//   children?: FlowLayoutItem[];
-//   [key: string]: any;
-// }
+export type LayoutItemType = FlowLayoutItem | LayoutItem;
 
 export interface DroppingItem {
   i: string;
@@ -104,7 +107,7 @@ export type Position = {
   left: number;
   top: number;
   width: number;
-  height: number;
+  height: number | 'auto';
 };
 
 export interface DraggableProps {

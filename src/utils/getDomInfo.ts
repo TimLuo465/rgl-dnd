@@ -39,6 +39,7 @@ export const getDOMInfo = (dom: HTMLElement) => {
     outerHeight: Math.round(height + margin.top + margin.bottom),
     margin,
     padding,
+    inFlow: dom && dom.parentElement && !!styleInFlow(dom, dom.parentElement),
   };
 };
 
@@ -50,10 +51,17 @@ export const movePlaceholder = (indicator: any, parentNode?: any, thickness: num
     h = 0;
 
   if (indicator?.el) {
-    w = domInfo.width;
-    h = thickness;
-    t = indicator.where === 'before' ? domInfo.top : domInfo.bottom;
-    l = domInfo.left;
+    if (!domInfo.inFlow) {
+      w = thickness;
+      h = domInfo.height;
+      t = domInfo.top;
+      l = indicator.where === 'before' ? domInfo.left : domInfo.left + domInfo.outerWidth;
+    } else {
+      w = domInfo.width;
+      h = thickness;
+      t = indicator.where === 'before' ? domInfo.top : domInfo.bottom;
+      l = domInfo.left;
+    }
   } else {
     if (parentNode) {
       t = domInfo.top + domInfo.padding.top;
@@ -89,7 +97,6 @@ export const findPosition = (el: any, dim: any, posX: number, posY: number) => {
     xCenter = 0,
     yCenter = 0,
     dimDown = 0;
-  // console.log(posX, posY, dim, 'posYposY');
 
   // Right position of the element. Left + Width
   dimRight = dim.left + dim.outerWidth;
@@ -107,14 +114,59 @@ export const findPosition = (el: any, dim: any, posX: number, posY: number) => {
   )
     return;
 
-  if (posY < dimDown) yLimit = dimDown;
-
-  // If y upper than center
-  if (posY < yCenter) {
-    result.where = 'before';
+  if (!dim.inFlow) {
+    if (posY < dimDown) yLimit = dimDown;
+    if (posX < xCenter) {
+      xLimit = xCenter;
+      result.where = 'before';
+    } else {
+      leftLimit = xCenter;
+      result.where = 'after';
+    }
   } else {
-    result.where = 'after'; // After last element
+    // If y upper than center
+    if (posY < yCenter) {
+      result.where = 'before';
+    } else {
+      result.where = 'after'; // After last element
+    }
   }
 
   return result;
+};
+
+export const styleInFlow = (el: HTMLElement, parent: HTMLElement) => {
+  const style: any = getComputedStyle(el);
+  const parentStyle: any = getComputedStyle(parent);
+
+  if (style.overflow && style.overflow !== 'visible') return;
+  if (parentStyle.float !== 'none') return;
+  if (parent && parentStyle.display === 'grid') {
+    return;
+  }
+  if (parent && parentStyle.display === 'flex' && parentStyle['flex-direction'] !== 'column')
+    return;
+  switch (style.position) {
+    case 'static':
+    case 'relative':
+      break;
+    default:
+      return;
+  }
+  switch (el.tagName) {
+    case 'TR':
+    case 'TBODY':
+    case 'THEAD':
+    case 'TFOOT':
+      return true;
+  }
+  switch (style.display) {
+    case 'block':
+    case 'list-item':
+    case 'table':
+    case 'flex':
+    case 'grid':
+      return true;
+  }
+  return;
 };

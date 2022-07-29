@@ -4,7 +4,6 @@ import { DroppableProps } from '../types';
 
 const Droppable: React.FC<DroppableProps> = (props) => {
   const { accept, children, canDrop, onDrop, onHover } = props;
-
   const [, connect] = useDrop(
     () => ({
       accept: canDrop ? accept : [],
@@ -19,7 +18,6 @@ const Droppable: React.FC<DroppableProps> = (props) => {
       hover: (item, monitor) => {
         const offset = monitor.getSourceClientOffset();
         const itemType = monitor.getItemType() as string;
-
         if (monitor.isOver({ shallow: true })) {
           onHover?.(item, offset, itemType);
         }

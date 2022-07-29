@@ -11,20 +11,23 @@ import {
   getFlowLayoutItem,
   getNewLayouts,
   movePlaceholder,
+  renderIndicator,
 } from '../utils';
 import Droppable from './Droppable';
 import event from './event';
 import FlowLayoutItem from './FlowLayoutItem';
 
-const group = new Array(20).fill(1).map((item, index) => {
-  return `rgl-dnd-group_${index}`;
-});
+// 记录指示线位置
 let indicator = {
   index: -1,
   where: 'before',
 };
 
+// 记录正在拖拽的组件，是从哪个流式容器中拖过来的
 let preLayoutItem = null;
+
+// hover事件节流
+let isHovered: boolean = false;
 
 const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
   const {
@@ -33,12 +36,12 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
     layoutItem,
     droppingItem,
     empty,
+    EmptyContainer,
     onDrop,
     onHover,
-    onMouseEnter,
-    onMouseLeave,
     children,
   } = props;
+
   const [layouts, setLayouts] = useState<any[]>(_layouts);
   const [flowContainer, setFlowContainer] = useState<any>(null);
   const containerRef = React.createRef<HTMLDivElement>();
@@ -62,16 +65,21 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
 
   const resetIndicator = () => {
     // 重置指示线
-    const Indicator = document.querySelector(`.${prefixCls}-indicator`) as HTMLElement;
-    Indicator.style.display = 'none';
+    isHovered = false;
     indicator = {
       index: -1,
       where: 'before',
     };
+    const Indicator = document.querySelector(`.${prefixCls}-indicator`) as HTMLElement;
+    if (Indicator) {
+      Indicator.style.display = 'none';
+    }
   };
 
   // drop时，更新layouts
   const handleDrop = (dragItem: LayoutItem, itemType: string) => {
+    // 如果当前正在拖动的组件，就是当前容器，那么不触发drop事件
+    if (dragItem.i === layoutItem.i && dragItem.isContainer) return;
     const newItem = moveCardItem();
     const newLayoutItem = JSON.parse(JSON.stringify(layoutItem));
     let newPreLayoutItem = JSON.parse(JSON.stringify(preLayoutItem));
@@ -118,27 +126,24 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
       }
     }
     const newLayouts = getNewLayouts(layouts, newLayoutItem, newPreLayoutItem);
+    event.emit('onFlowLayoutDrop', dragItem);
     onDrop?.(newLayouts, dragItem);
   };
 
   const handleHover = (item: any, offset: any, itemType: string) => {
-    if (!checkArray(layoutItem.children)) {
-      const position = movePlaceholder(null, flowContainer);
-      setIndicatorPosition(position);
-    } else {
-      if (indicator.index === -1) {
-        const index = flowContainer.childNodes.length - 1;
-        const el = flowContainer.childNodes[index];
-        const position = movePlaceholder({ el, where: 'after' });
+    // 如果当前正在拖动的组件，就是当前容器，那么不触发hover事件
+    if (item.isContainer && item.i === layoutItem.i) return;
+
+    if (!isHovered) {
+      isHovered = true;
+      if (!checkArray(layoutItem.children)) {
+        const position = movePlaceholder(null, flowContainer);
         setIndicatorPosition(position);
-        indicator = {
-          index: index,
-          where: 'after',
-        };
       }
     }
+
     event.emit('overFlowLayout');
-    onHover?.();
+    onHover?.(item, itemType);
   };
 
   const handleDragStart = () => {
@@ -150,15 +155,20 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
   };
 
   const renderItems = () => {
+    if (!checkArray(layoutItem.children)) {
+      // 如果容器内没有子组件，那么默认渲染空容器
+      return <EmptyContainer></EmptyContainer>;
+      // return '99999';
+    }
+
     return React.Children.map(children, (child: any, index: number) => {
       const item = child.props['data-flow'];
-
       return (
         <FlowLayoutItem
           key={index}
           data={getFlowLayoutItem(layouts, item.i)}
-          onDragEnd={handleDragEnd}
           onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
         >
           {React.cloneElement(child, {
             ...child.props,
@@ -170,7 +180,6 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
 
   const handleDragOver = (index?: number) => {
     return throttle((e) => {
-      // console.log('dragover----------', index);
       const { clientX: x, clientY: y } = e;
       const indicatorInfo = findPosition(e.target, getDOMInfo(e.target), x, y);
       const position = movePlaceholder(indicatorInfo);
@@ -179,21 +188,25 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
         index,
         where: indicatorInfo.where,
       };
-    }, 1000 / 60);
+    }, 1 / 60);
   };
 
   useEffect(() => {
-    // console.log(_layouts, '_layouts_layouts_layouts_layouts_layouts');
     setLayouts(_layouts);
-    const dragOverhandlers = [];
     setFlowContainer(containerRef.current);
+
+    const dragOverhandlers = [];
+    // 给当前容器的子节点，注册dragover事件
     containerRef.current?.childNodes?.forEach((el: HTMLElement, index: number) => {
-      const dragOverhandler = addRGLEventListener(el, 'dragover', (e) => {
-        e.rgl.stopPropagation();
-        e.preventDefault();
-        handleDragOver(index)(e);
-      });
-      dragOverhandlers.push(dragOverhandler);
+      // 只有标签节点并且可拖拽的组件，才注册dragover事件
+      if (el.nodeType === 1 && el.getAttribute('draggable')) {
+        const dragOverhandler = addRGLEventListener(el, 'dragover', (e) => {
+          e.rgl.stopPropagation();
+          e.preventDefault();
+          handleDragOver(index)(e);
+        });
+        dragOverhandlers.push(dragOverhandler);
+      }
     });
 
     return () => {
@@ -204,11 +217,9 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
   useEffect(() => {
     event.on('dragEnd.cardItem', resetIndicator);
     event.on('overLayout', resetIndicator);
-    const Indicator = document.createElement('div');
-    Indicator.classList.add(`${prefixCls}-indicator`);
-    document.body.appendChild(Indicator);
+    // 渲染指示线
+    renderIndicator();
     return () => {
-      Indicator.parentNode.removeChild(Indicator);
       event.off('dragEnd.cardItem', resetIndicator);
       event.off('overLayout', resetIndicator);
     };
@@ -217,18 +228,12 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
   return (
     <Droppable
       canDrop={droppable}
-      // accept={[DEFAULT_ITEMTYPE]}
-      accept={[...group, 'rgl-dnd-card']}
+      accept={['rgl-dnd-group_0', 'rgl-dnd-card']}
       onDrop={handleDrop}
       onHover={handleHover}
     >
-      <div
-        ref={containerRef}
-        id="flow-layout"
-        className={`${prefixCls}-flow-layout-container`}
-        style={{ height: '100%' }}
-      >
-        {empty ? '请拖入组件' : renderItems()}
+      <div ref={containerRef} className={`${prefixCls}-flow-layout`} style={{ height: '100%' }}>
+        {renderItems()}
       </div>
     </Droppable>
   );

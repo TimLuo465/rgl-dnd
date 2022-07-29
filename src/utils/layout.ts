@@ -503,11 +503,17 @@ export function pickLayoutItem({ i, x, y, h, w }: LayoutItem) {
   return { i, x, y, h, w };
 }
 
-export function isEqual(layouts1: LayoutItem[], layouts2: LayoutItem[]) {
-  const s1 = layouts1?.map(pickLayoutItem);
-  const s2 = layouts2?.map(pickLayoutItem);
-
+export function isIdEqual(layouts1: LayoutItem[], layouts2: LayoutItem[]) {
+  const s1 = layouts1?.map((item) => item.i);
+  const s2 = layouts2?.map((item) => item.i);
   return lodashEqual(s1, s2);
+}
+
+export function isEqual(layouts1: LayoutItem[], layouts2: LayoutItem[]) {
+  // const s1 = layouts1?.map(pickLayoutItem);
+  // const s2 = layouts2?.map(pickLayoutItem);
+
+  return lodashEqual(layouts1, layouts2);
 }
 
 export function cloneLayouts(layouts: LayoutItem[]) {
@@ -528,4 +534,9 @@ export function getScrollbar(node: HTMLElement): HTMLElement | null {
   }
 
   return null;
+}
+
+export function setComDisplay(i: string, state: string) {
+  const el = document.querySelector(`[data-id="${i}"]`) as HTMLElement;
+  if (el) (el.parentNode as HTMLElement).style.display = state;
 }

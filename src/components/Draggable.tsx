@@ -14,6 +14,7 @@ const Draggable: React.FC<DraggableProps> = memo((props: DraggableProps) => {
     onDragEnd,
     onDragStart,
   } = props;
+
   const [collected, drag] = useDrag(
     () => ({
       type,

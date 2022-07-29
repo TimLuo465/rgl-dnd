@@ -15,9 +15,11 @@ import {
 import { DragItem, InternalEventType, LayoutItem, LayoutProps } from '../types';
 import {
   calcGridItemPosition,
+  calcH,
   calcLayoutByProps,
   calcLeftSpacing,
   calcXY,
+  checkObject,
   cloneLayouts,
   compact,
   getAllCollisions,
@@ -26,9 +28,11 @@ import {
   getScrollbar,
   getWH,
   isEqual,
+  isIdEqual,
   moveElement,
   pickLayoutItem,
   reLayout,
+  setComDisplay,
   setTransform,
   withLayoutItem,
 } from '../utils';
@@ -54,6 +58,8 @@ type GroupLayouts = {
   [key: string]: Layout;
 };
 
+const FlowLayoutHandles = ['w', 'e'];
+
 /** All layout instance by group */
 const groupLayouts: GroupLayouts = {};
 /** default accept */
@@ -66,8 +72,18 @@ let groupIndex = 0;
  */
 let hoveredGroups = [];
 
+const observeDom = (el: HTMLElement, callback) => {
+  const observer = new MutationObserver(callback);
+  observer.observe(el, { subtree: true, childList: true });
+  // observer.disconnect();
+  return observer;
+};
+
 class Layout extends React.Component<LayoutProps, LayoutStates> {
+  observer = null;
+
   isOverFlowLayout = false;
+
   group = '';
 
   mounted = false;
@@ -165,6 +181,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     window.addEventListener('resize', this.resize);
     event.on('dragEnd.cardItem', this.onCardItemDragEnd);
     event.on('overFlowLayout', this.overFlowLayout);
+    event.on('onFlowLayoutDrop', this.onFlowLayoutDrop);
     this.onLayoutMaybeChanged(this.state.layouts, this.props.layouts, false);
     this.event.emit('mounted');
   }
@@ -176,24 +193,61 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       return;
     }
 
+    if (!isIdEqual(prevState.layouts, layouts)) {
+      layouts.forEach((item, index) => {
+        const el = document.querySelector(`[data-id="${item.i}"]`) as HTMLElement;
+        if (!el || !item.autoHeight) return;
+        this.observer = observeDom(el, this.observeCallback(el, item));
+      });
+    }
+
     this.onLayoutMaybeChanged(layouts, prevState.layouts, false);
   }
 
   componentWillUnmount() {
+    // 停止mutation监听
+    this.observer?.disconnect();
     delete groupLayouts[this.group];
     window.removeEventListener('resize', this.resize);
     event.off('dragEnd.cardItem', this.onCardItemDragEnd);
     event.off('overFlowLayout', this.overFlowLayout);
   }
 
+  observeCallback(el: HTMLElement, item: LayoutItem) {
+    return (mutationsList: any) => {
+      const height = el.clientHeight;
+      const positionParams = this.getPositionParams();
+      const h = calcH(positionParams, height, item.y);
+      const newLayouts = this.state.layouts.map((layoutItem: LayoutItem) => {
+        if (layoutItem.i === item.i) {
+          layoutItem.h = h;
+          return layoutItem;
+        }
+        return layoutItem;
+      });
+      this.setState({
+        layouts: newLayouts,
+      });
+      this.onLayoutMaybeChanged(newLayouts);
+    };
+  }
+
   overFlowLayout = () => {
     if (this.isOverFlowLayout) return;
     this.isOverFlowLayout = true;
-    const { draggingItem } = this.state;
-    // console.log(draggingItem, '=====');
+    const { draggingItem, layouts } = this.state;
     if (draggingItem) {
-      this.resetDraggingState(draggingItem.i);
+      // 移入流式容器时候，隐藏占位符和原有组件
+      const el = document.querySelector(`.${prefixCls}-placeholder`) as HTMLElement;
+      el.style.display = 'none';
+      // setPlaceholdeDisplay()
+      setComDisplay(draggingItem.i, 'none');
     }
+  };
+
+  onFlowLayoutDrop = (layoutItem: any) => {
+    const { draggingItem, layouts } = this.state;
+    this.resetDraggingState(layoutItem.i || draggingItem.i);
   };
 
   // isUserAction - if true, it maybe drop, resize or swap, if false, it maybe correctBounds
@@ -266,10 +320,13 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   };
 
   hover = (item: DragItem, offset: XYCoord, itemType: string) => {
-    // console.log('layout-hover-layout-hover');
-    event.emit('overLayout');
+    const el = document.querySelector(`.${prefixCls}-placeholder`) as HTMLElement;
+    if (el && getComputedStyle(el).display === 'none') {
+      el.style.display = 'block';
+    }
+
     this.isOverFlowLayout = false;
-    const { layouts } = this.state;
+    const { layouts, draggingItem } = this.state;
     let layoutItem: LayoutItem | null = null;
 
     if (!this.scrollbar) {
@@ -291,10 +348,12 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       // move card item
       layoutItem = this.moveCardItem(item, offset);
     }
-    layoutItem = null;
+
     if (layoutItem) {
       this.props.onDragOver?.(layoutItem);
     }
+
+    event.emit('overLayout');
   };
 
   calcXY(item: LayoutItem, offset: XYCoord) {
@@ -315,11 +374,11 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
     const { layouts, prevPosition } = this.state;
     const position = this.calcXY(layoutItem, offset);
-
     layoutItem.placeholder = true;
     if (position.x === prevPosition?.x && position.y === prevPosition?.y) {
       return;
     }
+
     const { preventCollision, compactType, cols } = this.props;
 
     const newLayouts = moveElement(
@@ -349,20 +408,20 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
    */
   moveCardItem(item: DragItem, offset: XYCoord): LayoutItem | null {
     const { droppingItem } = this.props;
-    console.log(droppingItem, '==============================');
     const { draggingItem, layouts } = this.state;
     let layoutItem: LayoutItem;
-
     if (!draggingItem) {
       if (!droppingItem) {
         return null;
       }
 
-      const _item: any = {
-        ...item,
-        ...droppingItem,
-        i: item.i || droppingItem.i,
-      };
+      // const _item: any = {
+      //   ...item,
+      //   ...droppingItem,
+      //   i: item.i || droppingItem.i,
+      // };
+
+      const _item: any = checkObject(item) ? item : droppingItem;
 
       layoutItem = {
         ..._item,
@@ -378,8 +437,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       this.moveItem(layoutItem, offset);
     }
 
-    layoutItem = null;
-
     return layoutItem;
   }
 
@@ -391,7 +448,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     const { group } = this;
     const { layouts } = this.state;
     let layoutItem = getLayoutItem(layouts, item.i);
-    // console.log(layoutItem, '------------');
     // drag group item to other group
     if (!layoutItem) {
       if (itemType !== group) {
@@ -421,10 +477,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
   onDrop = (dragItem: DragItem, itemType: string) => {
     const { draggingItem, layouts } = this.state;
-
     const index = layouts.findIndex((l) => l.i === draggingItem.i);
     const layoutItem = layouts[index];
-
     delete layoutItem.placeholder;
 
     // group layout change
@@ -449,6 +503,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     }
 
     this.resetDraggingState(draggingItem.i);
+
+    setComDisplay(draggingItem.i, 'block');
 
     this.props.onDrop?.(layouts, layoutItem, { item: dragItem, type: itemType }, this.group);
   };
@@ -501,15 +557,14 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   onCardItemDragEnd = (item: DragItem, didDrop: boolean, itemType: string) => {
     const { allowOutBoundedDrop } = this.props;
     const { layouts, draggingItem } = this.state;
+
     if (!draggingItem) {
       return;
     }
-
     if (!didDrop) {
       // 判断是否是新增以及是否允许超出边界拖入
       if (allowOutBoundedDrop) {
         const isDrop = !this.oldLayouts.find((layout) => layout.i === draggingItem.i);
-        // console.log(isDrop, 'isDropisDrop');
         if (isDrop && !this.isOverFlowLayout) {
           this.onDrop(item, itemType);
         } else {
@@ -559,7 +614,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
           (layoutItem) => layoutItem.i !== l.i
         );
         hasCollisions = collisions.length > 0;
-
         // If we're colliding, we need adjust the placeholder.
         if (hasCollisions) {
           // adjust w && h to maximum allowed space
@@ -645,12 +699,12 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       return null;
     }
     const { layouts } = this.state;
+
     const { i, x, y } = placeholder;
     const positionParams = this.getPositionParams();
     const leftSpacing = calcLeftSpacing(layouts, placeholder);
     const { w, h } = getWH(placeholder, this.getPositionParams(), leftSpacing);
     const position = calcGridItemPosition(positionParams, x, y, w, h);
-
     return <div key={i} className={`${prefixCls}-placeholder`} style={setTransform(position)} />;
   };
 
@@ -661,7 +715,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     return React.Children.map(children, (child: React.ReactElement) => {
       const l = child.props['data-grid'];
       let item: LayoutItem;
-
       if (!l || child.type !== 'div') {
         return null;
       }
@@ -675,7 +728,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       if (!item) {
         return null;
       }
-      console.log(this.group, 'groupgroup');
 
       return (
         <Item
@@ -723,7 +775,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       ...style,
     };
 
-    // console.log(accept, '===========accept');
     return (
       <Droppable
         weId={this.group}
