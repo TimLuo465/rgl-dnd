@@ -8,12 +8,6 @@ export interface DragItem {
   [key: string]: any;
 }
 
-export interface FlowLayoutItem {
-  i: string;
-  children?: FlowLayoutItem[];
-  [key: string]: any;
-}
-
 export interface LayoutItem extends DragItem {
   i: string;
   x: number;
@@ -47,7 +41,7 @@ export interface DroppableProps {
   accept?: string[];
   canDrop?: boolean;
   onDrop?: (item: unknown, itemType: string) => void;
-  onHover?: (item: unknown, offset: XYCoord, itemType: string) => void;
+  onHover?: (item: unknown, offset: XYCoord, itemType: string, clientOffset?: XYCoord) => void;
   children?: ReactNode;
 }
 
@@ -84,14 +78,6 @@ export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
     dragInfo: DragInfo,
     group: string
   ) => void;
-}
-
-export interface FlowLayoutProps {
-  [key: string]: any;
-}
-
-export interface FlowLayoutItemProps {
-  [key: string]: any;
 }
 
 export type PositionParams = {
@@ -149,3 +135,34 @@ export type ItemStates = {
 export type CompactType = 'horizontal' | 'vertical';
 
 export type InternalEventType = 'mounted';
+
+export interface FlowLayoutItem {
+  i: string;
+  parentId?: string;
+  children?: FlowLayoutItem[];
+  [key: string]: any;
+}
+
+export type ItemType = LayoutItem | FlowLayoutItem;
+
+export interface FlowLayoutProps {
+  layouts: LayoutItem[];
+  layoutItem: FlowLayoutItem;
+  droppingItem: ItemType;
+  droppable?: boolean;
+  EmptyContainer?: React.ComponentType;
+  onDrop?: (layouts: LayoutItem[], item: ItemType) => void;
+  onHover?: (item: LayoutItem | FlowLayoutItem, itemType: string) => void;
+}
+
+export interface FlowLayoutItemProps {
+  data: ItemType;
+  onDragStart?: (draggedItem: DragItem) => void;
+  onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;
+}
+
+export interface indicatorInfo {
+  el: HTMLElement | null;
+  index: number;
+  where: 'before' | 'after';
+}

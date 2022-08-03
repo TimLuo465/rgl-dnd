@@ -84,9 +84,10 @@ export const movePlaceholder = (indicator: any, parentNode?: any, thickness: num
   };
 };
 
-export const findPosition = (el: any, dim: any, posX: number, posY: number) => {
+export const findPosition = (targetNodes: any, dims: any, posX: number, posY: number) => {
   let result: any = {
-    el,
+    el: null,
+    index: -1,
     where: 'before',
   };
 
@@ -98,40 +99,46 @@ export const findPosition = (el: any, dim: any, posX: number, posY: number) => {
     yCenter = 0,
     dimDown = 0;
 
-  // Right position of the element. Left + Width
-  dimRight = dim.left + dim.outerWidth;
-  // Bottom position of the element. Top + Height
-  dimDown = dim.top + dim.outerHeight;
-  // X center position of the element. Left + (Width / 2)
-  xCenter = dim.left + dim.outerWidth / 2;
-  // Y center position of the element. Top + (Height / 2)
-  yCenter = dim.top + dim.outerHeight / 2;
+  for (let i = 0, len = dims.length; i < len; i++) {
+    const dim = dims[i];
+    // Right position of the element. Left + Width
+    dimRight = dim.left + dim.outerWidth;
+    // Bottom position of the element. Top + Height
+    dimDown = dim.top + dim.outerHeight;
+    // X center position of the element. Left + (Width / 2)
+    xCenter = dim.left + dim.outerWidth / 2;
+    // Y center position of the element. Top + (Height / 2)
+    yCenter = dim.top + dim.outerHeight / 2;
+    // Skip if over the limits
+    if (
+      (xLimit && dim.left > xLimit) ||
+      (yLimit && yCenter >= yLimit) || // >= avoid issue with clearfixes
+      (leftLimit && dimRight < leftLimit)
+    )
+      continue;
 
-  if (
-    (xLimit && dim.left > xLimit) ||
-    (yLimit && yCenter >= yLimit) || // >= avoid issue with clearfixes
-    (leftLimit && dimRight < leftLimit)
-  )
-    return;
-
-  if (!dim.inFlow) {
-    if (posY < dimDown) yLimit = dimDown;
-    if (posX < xCenter) {
-      xLimit = xCenter;
-      result.where = 'before';
+    result.index = i;
+    // If it's not in flow (like 'float' element)
+    if (!dim.inFlow) {
+      if (posY < dimDown) yLimit = dimDown;
+      //If x lefter than center
+      if (posX < xCenter) {
+        xLimit = xCenter;
+        result.where = 'before';
+      } else {
+        leftLimit = xCenter;
+        result.where = 'after';
+      }
     } else {
-      leftLimit = xCenter;
-      result.where = 'after';
-    }
-  } else {
-    // If y upper than center
-    if (posY < yCenter) {
-      result.where = 'before';
-    } else {
-      result.where = 'after'; // After last element
+      // If y upper than center
+      if (posY < yCenter) {
+        result.where = 'before';
+        break;
+      } else result.where = 'after'; // After last element
     }
   }
 
+  result.el = targetNodes[result.index];
   return result;
 };
 

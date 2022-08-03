@@ -1,6 +1,6 @@
 import { EventEmitter } from 'eventemitter3';
 
-type EventType = 'dragEnd.cardItem' | 'overFlowLayout' | 'overLayout' | 'onFlowLayoutDrop';
+type EventType = 'dragEnd.cardItem' | 'onFlowLayoutHover' | 'onLayoutHover' | 'onFlowLayoutDrop';
 
 const event = new EventEmitter<EventType>();
 

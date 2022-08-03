@@ -30,17 +30,19 @@ import {
   isEqual,
   isIdEqual,
   moveElement,
+  observeDom,
   pickLayoutItem,
   reLayout,
   setComDisplay,
+  setPlaceholderDisplay,
   setTransform,
   withLayoutItem,
 } from '../utils';
 import Droppable from './Droppable';
 import event from './event';
 import Item from './Item';
+import { layoutStore } from './LayoutContext';
 import './styles/layout.less';
-
 interface LayoutStates {
   offset: DOMRect | null;
   accept: string[];
@@ -58,8 +60,6 @@ type GroupLayouts = {
   [key: string]: Layout;
 };
 
-const FlowLayoutHandles = ['w', 'e'];
-
 /** All layout instance by group */
 const groupLayouts: GroupLayouts = {};
 /** default accept */
@@ -72,17 +72,10 @@ let groupIndex = 0;
  */
 let hoveredGroups = [];
 
-const observeDom = (el: HTMLElement, callback) => {
-  const observer = new MutationObserver(callback);
-  observer.observe(el, { subtree: true, childList: true });
-  // observer.disconnect();
-  return observer;
-};
-
 class Layout extends React.Component<LayoutProps, LayoutStates> {
   observer = null;
 
-  isOverFlowLayout = false;
+  isHoverFlowLayout = false;
 
   group = '';
 
@@ -148,6 +141,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       prevPosition: null,
       placeholder: null,
     };
+
+    layoutStore.setGroups(groupKeys);
   }
 
   static getDerivedStateFromProps(props, prevState: LayoutStates) {
@@ -158,7 +153,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
     const { layouts, cols, compactType } = props;
     const { layouts: _layouts } = prevState;
-
     if (!isEqual(layouts, _layouts)) {
       return {
         layouts: reLayout(layouts, compactType, cols),
@@ -180,10 +174,11 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     this.mounted = true;
     window.addEventListener('resize', this.resize);
     event.on('dragEnd.cardItem', this.onCardItemDragEnd);
-    event.on('overFlowLayout', this.overFlowLayout);
+    event.on('onFlowLayoutHover', this.onFlowLayoutHover);
     event.on('onFlowLayoutDrop', this.onFlowLayoutDrop);
     this.onLayoutMaybeChanged(this.state.layouts, this.props.layouts, false);
     this.event.emit('mounted');
+    this.observeContainer(this.state.layouts);
   }
 
   componentDidUpdate(prevProps: LayoutProps, prevState: LayoutStates) {
@@ -193,24 +188,27 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       return;
     }
 
-    if (!isIdEqual(prevState.layouts, layouts)) {
-      layouts.forEach((item, index) => {
-        const el = document.querySelector(`[data-id="${item.i}"]`) as HTMLElement;
-        if (!el || !item.autoHeight) return;
-        this.observer = observeDom(el, this.observeCallback(el, item));
-      });
+    if (!isIdEqual(prevProps.layouts, this.props.layouts)) {
+      this.observeContainer(layouts);
     }
 
     this.onLayoutMaybeChanged(layouts, prevState.layouts, false);
   }
 
   componentWillUnmount() {
-    // 停止mutation监听
-    this.observer?.disconnect();
     delete groupLayouts[this.group];
     window.removeEventListener('resize', this.resize);
     event.off('dragEnd.cardItem', this.onCardItemDragEnd);
-    event.off('overFlowLayout', this.overFlowLayout);
+    event.off('onFlowLayoutHover', this.onFlowLayoutHover);
+  }
+
+  observeContainer(layouts: LayoutItem[]) {
+    layouts.forEach((item, index) => {
+      const el = document.querySelector(`[data-id="${item.i}"]`) as HTMLElement;
+      if (!el || !item.autoHeight) return;
+      // 监听容器内部组件变化，重新计算高度和h值
+      observeDom(el, this.observeCallback(el, item));
+    });
   }
 
   observeCallback(el: HTMLElement, item: LayoutItem) {
@@ -232,20 +230,23 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     };
   }
 
-  overFlowLayout = () => {
-    if (this.isOverFlowLayout) return;
-    this.isOverFlowLayout = true;
+  onFlowLayoutHover = () => {
+    if (this.isHoverFlowLayout) return;
+    this.isHoverFlowLayout = true;
     const { draggingItem, layouts } = this.state;
     if (draggingItem) {
-      // 移入流式容器时候，隐藏占位符和原有组件
-      const el = document.querySelector(`.${prefixCls}-placeholder`) as HTMLElement;
-      el.style.display = 'none';
-      // setPlaceholdeDisplay()
-      setComDisplay(draggingItem.i, 'none');
+      // 移入流式容器时候，隐藏占位符
+      setPlaceholderDisplay('none');
+
+      if (!draggingItem.parentId) {
+        // 移入流式布局时，网格布局中原有组件隐藏, 根据parentId判断是网格还是流式中的组件
+        setComDisplay(draggingItem.i, 'none');
+      }
     }
   };
 
   onFlowLayoutDrop = (layoutItem: any) => {
+    // 流式容器drop的时候，清空状态
     const { draggingItem, layouts } = this.state;
     this.resetDraggingState(layoutItem.i || draggingItem.i);
   };
@@ -320,12 +321,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   };
 
   hover = (item: DragItem, offset: XYCoord, itemType: string) => {
-    const el = document.querySelector(`.${prefixCls}-placeholder`) as HTMLElement;
-    if (el && getComputedStyle(el).display === 'none') {
-      el.style.display = 'block';
-    }
-
-    this.isOverFlowLayout = false;
+    this.isHoverFlowLayout = false;
+    setPlaceholderDisplay('block');
     const { layouts, draggingItem } = this.state;
     let layoutItem: LayoutItem | null = null;
 
@@ -353,7 +350,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       this.props.onDragOver?.(layoutItem);
     }
 
-    event.emit('overLayout');
+    event.emit('onLayoutHover');
   };
 
   calcXY(item: LayoutItem, offset: XYCoord) {
@@ -414,12 +411,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       if (!droppingItem) {
         return null;
       }
-
-      // const _item: any = {
-      //   ...item,
-      //   ...droppingItem,
-      //   i: item.i || droppingItem.i,
-      // };
 
       const _item: any = checkObject(item) ? item : droppingItem;
 
@@ -485,10 +476,9 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     if (itemType === this.group) {
       this.onLayoutMaybeChanged(layouts, this.oldLayouts);
     } else {
-      // new card item or other group item
+      // // new card item or other group item
       const index = layouts.findIndex((l) => l.i === draggingItem.i);
       const sourceLayout = groupLayouts[itemType];
-
       // remove dragitem from layout
       // use ondrop to custom handle layouts change when drag new item
       layouts.splice(index, 1);
@@ -565,7 +555,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       // 判断是否是新增以及是否允许超出边界拖入
       if (allowOutBoundedDrop) {
         const isDrop = !this.oldLayouts.find((layout) => layout.i === draggingItem.i);
-        if (isDrop && !this.isOverFlowLayout) {
+        if (isDrop && !this.isHoverFlowLayout) {
           this.onDrop(item, itemType);
         } else {
           this.setState({
@@ -598,7 +588,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     } else {
       // drop on layout, but not emit onDrop
       // maybe nested layout, so trigger onDrop manual
-      !this.isOverFlowLayout && this.onDrop(item, itemType);
+      !this.isHoverFlowLayout && this.onDrop(item, itemType);
     }
   };
 

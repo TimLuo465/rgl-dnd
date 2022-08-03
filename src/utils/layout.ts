@@ -1,4 +1,5 @@
 import lodashEqual from 'lodash.isequal';
+import { prefixCls } from '../constants';
 import { CompactType, DragItem, LayoutItem, PositionParams } from '../types';
 import { calcCP } from './calclate';
 
@@ -539,4 +540,18 @@ export function getScrollbar(node: HTMLElement): HTMLElement | null {
 export function setComDisplay(i: string, state: string) {
   const el = document.querySelector(`[data-id="${i}"]`) as HTMLElement;
   if (el) (el.parentNode as HTMLElement).style.display = state;
+}
+
+export function setPlaceholderDisplay(state: string) {
+  const el = document.querySelector(`.${prefixCls}-placeholder`) as HTMLElement;
+  const condition = state === 'none' ? 'block' : 'none';
+  if (el && getComputedStyle(el).display === condition) {
+    el.style.display = state;
+  }
+}
+
+export function observeDom(el: HTMLElement, callback) {
+  const observer = new MutationObserver(callback);
+  observer.observe(el, { subtree: true, childList: true });
+  return observer;
 }

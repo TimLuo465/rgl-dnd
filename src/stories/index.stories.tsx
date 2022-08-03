@@ -22,28 +22,29 @@ const mockLayouts = [
     // minW: 1,
     // plachodler: true,
   },
-  // {
-  //   i: 'a3987f12300f452289c74e0d87893561',
-  //   x: 0,
-  //   y: 0,
-  //   w: 12,
-  //   h: 24,
-  //   scope: '',
-  //   selected: false,
-  //   minH: 3,
-  //   minW: 1,
-  //   isContainer: true,
-  //   children: [
-  //     {
-  //       i: '12345678976543',
-  //       parentId: 'a3987f12300f452289c74e0d87893561',
-  //     },
-  //     {
-  //       i: '8765434567',
-  //       parentId: 'a3987f12300f452289c74e0d87893561',
-  //     },
-  //   ],
-  // },
+  {
+    i: 'a3987f12300f452289c74e0d87893561',
+    x: 0,
+    y: 0,
+    w: 12,
+    h: 8.545454545454545,
+    scope: '',
+    selected: false,
+    minH: 3,
+    minW: 1,
+    isContainer: true,
+    autoHeight: true,
+    children: [
+      // {
+      //   i: '12345678976543',
+      //   parentId: 'a3987f12300f452289c74e0d87893561',
+      // },
+      // {
+      //   i: '8765434567',
+      //   parentId: 'a3987f12300f452289c74e0d87893561',
+      // },
+    ],
+  },
 ];
 
 const mockFlowLayouts = [
@@ -91,7 +92,7 @@ const containerStyle: CSSProperties = {
   float: 'left',
   width: '100%',
   border: '1px solid #000',
-  height: 700,
+  height: 500,
   overflow: 'auto',
 };
 
@@ -120,6 +121,8 @@ export const Default: React.FC = () => {
     i: (Math.random() * 1000000).toString(),
     w: 3,
     h: 10,
+    x: 0,
+    y: 0,
   };
 
   const droppingContainer = {
@@ -193,14 +196,13 @@ export const Default: React.FC = () => {
     );
   };
 
-  const EmptyContainer = () => {
+  const EmptyContainer: React.FC = () => {
     return (
       <div
         style={{
           height: '80px',
           lineHeight: '80px',
           textAlign: 'center',
-          // border: '1px dashed red',
         }}
       >
         请拖入组件
@@ -272,7 +274,6 @@ export const Default: React.FC = () => {
               layouts={layouts}
               layoutItem={item}
               droppingItem={isDropContainer ? droppingContainer : droppingItem}
-              empty={!checkArray(item.children)}
               EmptyContainer={EmptyContainer}
               onDrop={onFlowLayoutDrop}
               onHover={onFlowLayoutHover}
@@ -309,13 +310,12 @@ export const Default: React.FC = () => {
 
   const onDrop1 = (_layouts, layoutItem, dragInfo, group) => {
     if (dragInfo.type !== group) {
-      let newLayouts = layouts;
+      let newLayouts = _layouts;
       if (layoutItem?.parentId) {
-        newLayouts = filterLayouts(layouts, layoutItem);
+        newLayouts = filterLayouts(newLayouts, layoutItem);
         delete layoutItem.parentId;
       }
       newLayouts.push(layoutItem);
-      console.log(newLayouts, 'newLayoutsnewLayouts');
       setLayouts(newLayouts.slice());
     }
   };
@@ -419,7 +419,6 @@ export const Default: React.FC = () => {
           cols={12}
           ref={ref1}
           onDrop={onDrop1}
-          onDragStart={onDragStartBox}
           onDragOver={(l) => {
             delete l.minW;
           }}

@@ -1,7 +1,8 @@
 import throttle from 'lodash.throttle';
 import React, { useEffect, useState } from 'react';
-import { prefixCls } from '../constants';
-import { FlowLayoutProps, LayoutItem } from '../types';
+import { XYCoord } from 'react-dnd';
+import { prefixCls } from '../../constants';
+import { FlowLayoutProps, indicatorInfo, ItemType, LayoutItem } from '../../types';
 import {
   addRGLEventListener,
   checkArray,
@@ -12,22 +13,21 @@ import {
   getNewLayouts,
   movePlaceholder,
   renderIndicator,
-} from '../utils';
-import Droppable from './Droppable';
-import event from './event';
+} from '../../utils';
+import Droppable from '../Droppable';
+import event from '../event';
+import { useLayoutContext } from '../LayoutContext';
 import FlowLayoutItem from './FlowLayoutItem';
 
 // 记录指示线位置
-let indicator = {
+let indicator: indicatorInfo = {
+  el: null,
   index: -1,
   where: 'before',
 };
 
 // 记录正在拖拽的组件，是从哪个流式容器中拖过来的
-let preLayoutItem = null;
-
-// hover事件节流
-let isHovered: boolean = false;
+let preLayoutItem: ItemType | null = null;
 
 const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
   const {
@@ -35,15 +35,14 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
     layouts: _layouts,
     layoutItem,
     droppingItem,
-    empty,
     EmptyContainer,
     onDrop,
     onHover,
     children,
   } = props;
 
-  const [layouts, setLayouts] = useState<any[]>(_layouts);
-  const [flowContainer, setFlowContainer] = useState<any>(null);
+  const [layouts, setLayouts] = useState<LayoutItem[]>(_layouts);
+  const [flowContainer, setFlowContainer] = useState<HTMLElement | null>(null);
   const containerRef = React.createRef<HTMLDivElement>();
 
   const moveCardItem = () => {
@@ -65,19 +64,37 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
 
   const resetIndicator = () => {
     // 重置指示线
-    isHovered = false;
     indicator = {
+      el: null,
       index: -1,
       where: 'before',
     };
+
     const Indicator = document.querySelector(`.${prefixCls}-indicator`) as HTMLElement;
     if (Indicator) {
       Indicator.style.display = 'none';
     }
   };
 
+  const calcIndicator = (targetNodes: any[], { x, y }: XYCoord) => {
+    const dimensionsInContainer = targetNodes
+      ? targetNodes.reduce((result: any[], el: HTMLElement) => {
+          const domInfo = getDOMInfo(el);
+          result.push(domInfo);
+          return result;
+        }, [])
+      : [];
+
+    const indicatorInfo = findPosition(targetNodes, dimensionsInContainer, x, y);
+
+    const position = movePlaceholder(indicatorInfo);
+    console.log(position, 'positionposition');
+    setIndicatorPosition(position);
+    indicator = indicatorInfo;
+  };
+
   // drop时，更新layouts
-  const handleDrop = (dragItem: LayoutItem, itemType: string) => {
+  const handleDrop = (dragItem: ItemType, itemType: string) => {
     // 如果当前正在拖动的组件，就是当前容器，那么不触发drop事件
     if (dragItem.i === layoutItem.i && dragItem.isContainer) return;
     const newItem = moveCardItem();
@@ -130,19 +147,23 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
     onDrop?.(newLayouts, dragItem);
   };
 
-  const handleHover = (item: any, offset: any, itemType: string) => {
+  const handleHover = (
+    item: ItemType,
+    offset: XYCoord,
+    itemType: string,
+    clientOffset: XYCoord
+  ) => {
     // 如果当前正在拖动的组件，就是当前容器，那么不触发hover事件
     if (item.isContainer && item.i === layoutItem.i) return;
 
-    if (!isHovered) {
-      isHovered = true;
-      if (!checkArray(layoutItem.children)) {
-        const position = movePlaceholder(null, flowContainer);
-        setIndicatorPosition(position);
-      }
-    }
+    const { x, y } = clientOffset;
+    const targetNodes: any[] = indicator.el
+      ? Array.from(indicator.el.parentNode.children)
+      : Array.from(flowContainer.children);
 
-    event.emit('overFlowLayout');
+    calcIndicator(targetNodes, clientOffset);
+
+    event.emit('onFlowLayoutHover');
     onHover?.(item, itemType);
   };
 
@@ -154,14 +175,53 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
     preLayoutItem = null;
   };
 
+  const handleDragOver = throttle((e: any) => {
+    e.rgl.stopPropagation();
+    e.preventDefault();
+    indicator = {
+      el: e.target,
+      index: -1,
+      where: 'before',
+    };
+  }, 1000 / 60);
+
+  useEffect(() => {
+    setLayouts(_layouts);
+    setFlowContainer(containerRef.current);
+
+    const dragOverhandlers = [];
+    // 给当前容器的子节点，注册dragover事件
+    containerRef.current?.childNodes?.forEach((el: HTMLElement, index: number) => {
+      // 只有标签节点并且可拖拽的组件，才注册dragover事件
+      if (el.nodeType === 1 && el.getAttribute('draggable')) {
+        const dragOverhandler = addRGLEventListener(el, 'dragover', handleDragOver);
+        dragOverhandlers.push(dragOverhandler);
+      }
+    });
+
+    return () => {
+      dragOverhandlers.forEach((item: any) => item());
+    };
+  }, [_layouts]);
+
+  useEffect(() => {
+    // 渲染指示线
+    renderIndicator();
+    event.on('dragEnd.cardItem', resetIndicator);
+    event.on('onLayoutHover', resetIndicator);
+    return () => {
+      event.off('dragEnd.cardItem', resetIndicator);
+      event.off('onLayoutHover', resetIndicator);
+    };
+  }, []);
+
   const renderItems = () => {
     if (!checkArray(layoutItem.children)) {
       // 如果容器内没有子组件，那么默认渲染空容器
-      return <EmptyContainer></EmptyContainer>;
-      // return '99999';
+      return <EmptyContainer />;
     }
 
-    return React.Children.map(children, (child: any, index: number) => {
+    return React.Children.map(children, (child: React.ReactElement, index: number) => {
       const item = child.props['data-flow'];
       return (
         <FlowLayoutItem
@@ -178,60 +238,11 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props) => {
     });
   };
 
-  const handleDragOver = (index?: number) => {
-    return throttle((e) => {
-      const { clientX: x, clientY: y } = e;
-      const indicatorInfo = findPosition(e.target, getDOMInfo(e.target), x, y);
-      const position = movePlaceholder(indicatorInfo);
-      setIndicatorPosition(position);
-      indicator = {
-        index,
-        where: indicatorInfo.where,
-      };
-    }, 1 / 60);
-  };
-
-  useEffect(() => {
-    setLayouts(_layouts);
-    setFlowContainer(containerRef.current);
-
-    const dragOverhandlers = [];
-    // 给当前容器的子节点，注册dragover事件
-    containerRef.current?.childNodes?.forEach((el: HTMLElement, index: number) => {
-      // 只有标签节点并且可拖拽的组件，才注册dragover事件
-      if (el.nodeType === 1 && el.getAttribute('draggable')) {
-        const dragOverhandler = addRGLEventListener(el, 'dragover', (e) => {
-          e.rgl.stopPropagation();
-          e.preventDefault();
-          handleDragOver(index)(e);
-        });
-        dragOverhandlers.push(dragOverhandler);
-      }
-    });
-
-    return () => {
-      dragOverhandlers.forEach((item) => item());
-    };
-  }, [_layouts]);
-
-  useEffect(() => {
-    event.on('dragEnd.cardItem', resetIndicator);
-    event.on('overLayout', resetIndicator);
-    // 渲染指示线
-    renderIndicator();
-    return () => {
-      event.off('dragEnd.cardItem', resetIndicator);
-      event.off('overLayout', resetIndicator);
-    };
-  }, []);
+  // 获取layout组件中的分组数据，设置accept
+  const { groups } = useLayoutContext();
 
   return (
-    <Droppable
-      canDrop={droppable}
-      accept={['rgl-dnd-group_0', 'rgl-dnd-card']}
-      onDrop={handleDrop}
-      onHover={handleHover}
-    >
+    <Droppable canDrop={droppable} accept={groups} onDrop={handleDrop} onHover={handleHover}>
       <div ref={containerRef} className={`${prefixCls}-flow-layout`} style={{ height: '100%' }}>
         {renderItems()}
       </div>

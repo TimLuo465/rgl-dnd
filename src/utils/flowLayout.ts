@@ -1,5 +1,6 @@
 import { prefixCls } from '../constants';
 import { LayoutItem, LayoutItemType } from '../types';
+
 /**
  * 检查对象是否为空
  */
@@ -63,7 +64,9 @@ export const getFlowLayoutItem = (layouts: LayoutItemType[], id: string) => {
   return layoutItem;
 };
 
-// 渲染指示线
+/**
+ * 渲染指示线
+ */
 export const renderIndicator = () => {
   const el = document.querySelector(`.${prefixCls}-indicator`);
   if (el) return;
@@ -97,7 +100,9 @@ export const isEventBlockedByDescendant = <K extends keyof HTMLElementEventMap>(
   return false;
 };
 
-// 封装事件注册，添加阻止冒泡方法
+/**
+ * 封装事件注册，添加阻止冒泡方法
+ */
 export const addRGLEventListener = <K extends keyof HTMLElementEventMap>(
   el: HTMLElement,
   eventName: K,
