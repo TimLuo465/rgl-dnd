@@ -10,11 +10,11 @@
     "dist": true,
     ".eslintcache": true,
     ".gitignore": true,
-    "yarn-error.log": true,
+    "yarn-error.log": true
   },
   "search.exclude": {
     "**/node_modules": true,
-    "**/build": true,
+    "**/build": true
   },
   "editor.tabSize": 2,
   "editor.insertSpaces": true,
@@ -23,14 +23,14 @@
   // Turn off tsc task auto detection since we have the necessary tasks as npm scripts
   "typescript.tsc.autoDetect": "off",
   "editor.codeActionsOnSave": {
-    "source.fixAll": true,
+    "source.fixAll": true
   },
   "editor.formatOnSave": true,
   "[typescript]": {
     "editor.codeActionsOnSave": {
       "source.fixAll": true,
       "source.organizeImports": true
-    },
+    }
   },
   "[typescriptreact]": {
     "editor.codeActionsOnSave": {
@@ -38,5 +38,5 @@
       "source.organizeImports": true
     }
   },
-  "json.schemaDownload.enable": false,
+  "json.schemaDownload.enable": false
 }

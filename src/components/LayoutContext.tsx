@@ -1,33 +1,29 @@
-import React, { createContext, ReactNode, useCallback, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useState } from 'react';
 
-const context = createContext(null);
-
-const Provider = context.Provider;
+export const layoutContext = createContext(null);
+const { Provider } = layoutContext;
 
 export function useLayoutContext() {
-  return useContext(context);
-}
-
-interface ProviderProps extends React.Attributes {
-  children?: ReactNode;
+  return useContext(layoutContext);
 }
 
 type LayoutStoreType = {
-  setGroups: React.Dispatch<React.SetStateAction<string[]>>;
+  setGroups: (data: string[]) => void;
 };
 
 export const layoutStore: LayoutStoreType = {
   setGroups: () => {},
 };
 
-export default function LayoutProvider(props: ProviderProps) {
+const LayoutProvider: React.FC = (props) => {
   const { children } = props;
   const [groups, setGroups] = useState<string[]>([]);
-  const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
-  layoutStore.setGroups = useCallback((groups: string[]) => {
-    setGroups(groups);
+  layoutStore.setGroups = useCallback((data: string[]) => {
+    setGroups(data);
   }, []);
 
   return <Provider value={{ groups }}>{children}</Provider>;
-}
+};
+
+export default LayoutProvider;

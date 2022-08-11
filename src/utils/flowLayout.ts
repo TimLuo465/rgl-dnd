@@ -1,4 +1,4 @@
-import { prefixCls } from '../constants';
+import { DEFAULT_GROUP, DEFAULT_ITEMTYPE, prefixCls } from '../constants';
 import { LayoutItem, LayoutItemType } from '../types';
 
 /**
@@ -29,16 +29,16 @@ export const getNewLayouts = (
 
   const cloneData = JSON.parse(JSON.stringify(data));
   for (let index = 0; index < cloneData.length; index++) {
-    let item = cloneData[index];
+    const item = cloneData[index];
     if (item.i === layoutItem.i) {
       item.children = layoutItem.children;
     }
     if (item.i === preLayoutItem?.i) {
       item.children = preLayoutItem.children;
     }
-    if (checkArray(item.children)) {
-      item.children = getNewLayouts(item.children, layoutItem, preLayoutItem);
-    }
+    // if (checkArray(item.children)) {
+    //   item.children = getNewLayouts(item.children, layoutItem, preLayoutItem);
+    // }
   }
   return cloneData;
 };
@@ -125,4 +125,13 @@ export const addRGLEventListener = <K extends keyof HTMLElementEventMap>(
   el.addEventListener(eventName, bindedListener);
 
   return () => el.removeEventListener(eventName, bindedListener);
+};
+
+// 根据groupIndex获取accept
+export const getGroupKeys = (index) => {
+  const groupKeys = [DEFAULT_ITEMTYPE];
+  for (let i = 0; i <= index; i++) {
+    groupKeys.push(`${DEFAULT_GROUP}_${i}`);
+  }
+  return groupKeys;
 };

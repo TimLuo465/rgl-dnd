@@ -5,6 +5,7 @@ import {
   DEFAULT_COLS,
   DEFAULT_CONTAINER_PADDING,
   DEFAULT_DROPPINGITEM,
+  DEFAULT_FLOW_LAYOUT,
   DEFAULT_GROUP,
   DEFAULT_ITEMTYPE,
   DEFAULT_MARGIN,
@@ -19,7 +20,6 @@ import {
   calcLayoutByProps,
   calcLeftSpacing,
   calcXY,
-  checkObject,
   cloneLayouts,
   compact,
   getAllCollisions,
@@ -41,7 +41,7 @@ import {
 import Droppable from './Droppable';
 import event from './event';
 import Item from './Item';
-import { layoutStore } from './LayoutContext';
+import { layoutContext, layoutStore } from './LayoutContext';
 import './styles/layout.less';
 interface LayoutStates {
   offset: DOMRect | null;
@@ -73,8 +73,6 @@ let groupIndex = 0;
 let hoveredGroups = [];
 
 class Layout extends React.Component<LayoutProps, LayoutStates> {
-  observer = null;
-
   isHoverFlowLayout = false;
 
   group = '';
@@ -93,9 +91,10 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
   static defaultProps: LayoutProps;
 
+  static contextType = layoutContext;
+
   constructor(props: LayoutProps) {
     super(props);
-
     const { group, layouts, compactType, cols } = props;
 
     this.group = group || `${DEFAULT_GROUP}_${groupIndex}`;
@@ -105,6 +104,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     groupLayouts[this.group] = this;
     groupKeys = Object.keys(groupLayouts);
     groupKeys.push(DEFAULT_ITEMTYPE);
+    // 流式容器默认group
+    groupKeys.push(DEFAULT_FLOW_LAYOUT);
 
     // use default group
     if (!group) {
@@ -202,17 +203,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     event.off('onFlowLayoutHover', this.onFlowLayoutHover);
   }
 
-  observeContainer(layouts: LayoutItem[]) {
-    layouts.forEach((item, index) => {
-      const el = document.querySelector(`[data-id="${item.i}"]`) as HTMLElement;
-      if (!el || !item.autoHeight) return;
-      // 监听容器内部组件变化，重新计算高度和h值
-      observeDom(el, this.observeCallback(el, item));
-    });
-  }
-
   observeCallback(el: HTMLElement, item: LayoutItem) {
-    return (mutationsList: any) => {
+    return () => {
       const height = el.clientHeight;
       const positionParams = this.getPositionParams();
       const h = calcH(positionParams, height, item.y);
@@ -230,16 +222,24 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     };
   }
 
-  onFlowLayoutHover = () => {
+  observeContainer(layouts: LayoutItem[]) {
+    layouts.forEach((item: LayoutItem) => {
+      const el = document.querySelector(`[data-id="${item.i}"]`) as HTMLElement;
+      if (!el || !item.autoHeight) return;
+      // 监听容器内部组件变化，重新计算高度和h值
+      observeDom(el, this.observeCallback(el, item));
+    });
+  }
+
+  onFlowLayoutHover = (itemType: string) => {
     if (this.isHoverFlowLayout) return;
     this.isHoverFlowLayout = true;
-    const { draggingItem, layouts } = this.state;
+    const { draggingItem } = this.state;
     if (draggingItem) {
       // 移入流式容器时候，隐藏占位符
       setPlaceholderDisplay('none');
-
-      if (!draggingItem.parentId) {
-        // 移入流式布局时，网格布局中原有组件隐藏, 根据parentId判断是网格还是流式中的组件
+      if (![DEFAULT_FLOW_LAYOUT, DEFAULT_ITEMTYPE].includes(itemType)) {
+        // 如果是网格布局中的组件拖入到流式布局，那么原有网格布局中的组件在hover的时候需要隐藏
         setComDisplay(draggingItem.i, 'none');
       }
     }
@@ -247,7 +247,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
   onFlowLayoutDrop = (layoutItem: any) => {
     // 流式容器drop的时候，清空状态
-    const { draggingItem, layouts } = this.state;
+    const { draggingItem } = this.state;
     this.resetDraggingState(layoutItem.i || draggingItem.i);
   };
 
@@ -323,7 +323,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   hover = (item: DragItem, offset: XYCoord, itemType: string) => {
     this.isHoverFlowLayout = false;
     setPlaceholderDisplay('block');
-    const { layouts, draggingItem } = this.state;
+    const { layouts } = this.state;
     let layoutItem: LayoutItem | null = null;
 
     if (!this.scrollbar) {
@@ -412,7 +412,13 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
         return null;
       }
 
-      const _item: any = checkObject(item) ? item : droppingItem;
+      const _item: any = {
+        ...item,
+        ...droppingItem,
+        i: item.i || droppingItem.i,
+      };
+
+      // const _item: any = checkObject(item) ? item : droppingItem;
 
       layoutItem = {
         ..._item,

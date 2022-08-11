@@ -3,7 +3,7 @@ import { CSSProperties } from 'styled-components';
 import { Draggable, FlowLayout, Layout, Provider } from '..';
 import { DEFAULT_GROUP } from '../constants';
 import { LayoutItem } from '../types';
-import { checkArray } from '../utils';
+import { checkArray, getNewLayouts, UUID } from '../utils';
 
 export default {
   title: 'rgl-dnd',
@@ -22,29 +22,6 @@ const mockLayouts = [
     // minW: 1,
     // plachodler: true,
   },
-  {
-    i: 'a3987f12300f452289c74e0d87893561',
-    x: 0,
-    y: 0,
-    w: 12,
-    h: 8.545454545454545,
-    scope: '',
-    selected: false,
-    minH: 3,
-    minW: 1,
-    isContainer: true,
-    autoHeight: true,
-    children: [
-      // {
-      //   i: '12345678976543',
-      //   parentId: 'a3987f12300f452289c74e0d87893561',
-      // },
-      // {
-      //   i: '8765434567',
-      //   parentId: 'a3987f12300f452289c74e0d87893561',
-      // },
-    ],
-  },
 ];
 
 const mockFlowLayouts = [
@@ -55,38 +32,40 @@ const mockFlowLayouts = [
     isContainer: true,
     parentId: 'ROOT',
     children: [
-      {
-        i: '398767893432',
-        nodeId: '1112',
-        type: 'com',
-        parentId: '1111111111111111',
-      },
-      {
-        i: '987654345678',
-        nodeId: '11122',
-        type: 'com',
-        parentId: '1111111111111111',
-      },
-      {
-        i: '222222222222222',
-        nodeId: '1113',
-        type: 'flow-container',
-        isContainer: true,
-        parentId: '1111111111111111',
-        children: [
-          {
-            i: '1234567899',
-            nodeId: '11133',
-            type: 'com',
-            parentId: '222222222222222',
-          },
-        ],
-      },
+      '398767893432',
+      '987654345678',
+      // {
+      //   i: '398767893432',
+      //   nodeId: '1112',
+      //   type: 'com',
+      //   parentId: '1111111111111111',
+      // },
+      // {
+      //   i: '987654345678',
+      //   nodeId: '11122',
+      //   type: 'com',
+      //   parentId: '1111111111111111',
+      // },
+      // {
+      //   i: '222222222222222',
+      //   nodeId: '1113',
+      //   type: 'flow-container',
+      //   isContainer: true,
+      //   parentId: '1111111111111111',
+      //   children: [
+      //     {
+      //       i: '1234567899',
+      //       nodeId: '11133',
+      //       type: 'com',
+      //       parentId: '222222222222222',
+      //     },
+      //   ],
+      // },
     ],
   },
 ];
 
-let comKey = '11';
+// const comKey = '11';
 
 const containerStyle: CSSProperties = {
   float: 'left',
@@ -113,12 +92,9 @@ export const Default: React.FC = () => {
     { i: '4', x: 2, y: 0, w: 2, h: 20 },
   ]);
   const [layouts3, setLayouts3] = useState<LayoutItem[]>([]);
-  const mockFlowDroppingItem = {
-    i: (Math.random() * 1000000).toString(),
-  };
 
   const droppingItem = {
-    i: (Math.random() * 1000000).toString(),
+    i: UUID(),
     w: 3,
     h: 10,
     x: 0,
@@ -126,7 +102,7 @@ export const Default: React.FC = () => {
   };
 
   const droppingContainer = {
-    i: (Math.random() * 1000000).toString(),
+    i: UUID(),
     x: 0,
     y: 0,
     w: 12,
@@ -137,35 +113,41 @@ export const Default: React.FC = () => {
     children: [],
   };
 
-  const deleteItem1 = (i) => {
-    const index = layouts.findIndex((l) => l.i === i);
+  // const deleteItem1 = (i) => {
+  //   const index = layouts.findIndex((l) => l.i === i);
 
-    layouts.splice(index, 1);
-    setLayouts(layouts);
-  };
-  const deleteItem2 = (i) => {
-    const index = layouts2.findIndex((l) => l.i === i);
+  //   layouts.splice(index, 1);
+  //   setLayouts(layouts);
+  // };
+  // const deleteItem2 = (i) => {
+  //   const index = layouts2.findIndex((l) => l.i === i);
 
-    layouts2.splice(index, 1);
-    setLayouts2(layouts2.slice());
+  //   layouts2.splice(index, 1);
+  //   setLayouts2(layouts2.slice());
+  // };
+
+  const renderFlowLayout = (data) => {
+    if (!checkArray(data)) return;
+    return data.map((item, index) => {
+      if (item === '123456') {
+        return (
+          <div data-flow={item} key={item.i}>
+            <FlowLayout
+              layouts={layouts}
+              layoutItem={item}
+              onDrop={onFlowLayoutDrop}
+              EmptyContainer={EmptyContainer}
+            >
+              {renderFlowLayout(item.children)}
+            </FlowLayout>
+          </div>
+        );
+      }
+      return renderFlowLayoutItem(item, index);
+    });
   };
 
   const renderFlowLayoutItem = (item, index) => {
-    // return (
-    //   <img
-    //     src="https://img0.baidu.com/it/u=1734642970,311190705&fm=253&fmt=auto&app=138&f=JPEG?w=889&h=500"
-    //     style={{
-    //       width: '100px',
-    //       height: '100px',
-    //       objectFit: 'cover',
-    //       verticalAlign: 'middle',
-    //     }}
-    //     alt={item.i}
-    //     data-id={item.i}
-    //     data-flow={item}
-    //     key={item.i}
-    //   />
-    // );
     // if (index % 2 === 0) {
     //   return (
     //     <img
@@ -185,13 +167,13 @@ export const Default: React.FC = () => {
     // }
     return (
       <div
-        data-flow={item}
-        key={item.i}
-        data-id={item.i}
+        data-flow={{ i: item }}
+        key={item}
+        data-id={item}
         style={{ border: '1px solid #ddd', height: '80px' }}
       >
-        {item.i.substring(1, 5)}
-        {renderFlowLayout(item.children)}
+        {item.substring(1, 5)}
+        {/* {renderFlowLayout(item.children)} */}
       </div>
     );
   };
@@ -222,58 +204,35 @@ export const Default: React.FC = () => {
     setIsResetLayout(true);
   };
 
-  const renderFlowLayout1 = (data) => {
-    if (!checkArray(data)) return;
-    return data.map((item, index) => {
-      if (item.isContainer) {
-        return (
-          <div data-flow={item}>
-            <FlowLayout
-              layouts={flowLayouts}
-              layoutItem={item}
-              droppingItem={mockFlowDroppingItem}
-              onDrop={onFlowLayoutDrop1}
-              EmptyContainer={EmptyContainer}
-            >
-              {renderFlowLayout1(item.children)}
-            </FlowLayout>
-          </div>
-        );
-      }
-      return renderFlowLayoutItem(item, index);
-    });
-  };
+  // const renderFlowLayout1 = (data) => {
+  //   if (!checkArray(data)) return;
+  //   return data.map((item, index) => {
+  //     if (item.isContainer) {
+  //       return (
+  //         <div data-flow={item}>
+  //           <FlowLayout
+  //             layouts={flowLayouts}
+  //             layoutItem={item}
+  //             droppingItem={mockFlowDroppingItem}
+  //             onDrop={onFlowLayoutDrop1}
+  //             EmptyContainer={EmptyContainer}
+  //           >
+  //             {renderFlowLayout1(item.children)}
+  //           </FlowLayout>
+  //         </div>
+  //       );
+  //     }
+  //     return renderFlowLayoutItem(item, index);
+  //   });
+  // };
 
-  const renderFlowLayout = (data) => {
-    if (!checkArray(data)) return;
-    return data.map((item, index) => {
-      if (item.isContainer) {
-        return (
-          <div data-flow={item} key={item.i}>
-            <FlowLayout
-              layouts={layouts}
-              layoutItem={item}
-              droppingItem={isDropContainer ? droppingContainer : droppingItem}
-              onDrop={onFlowLayoutDrop}
-              EmptyContainer={EmptyContainer}
-            >
-              {renderFlowLayout(item.children)}
-            </FlowLayout>
-          </div>
-        );
-      }
-      return renderFlowLayoutItem(item, index);
-    });
-  };
   const renderItem1 = useCallback(
     (item) => {
       if (item.isContainer) {
         return (
           <div data-grid={item} key={item.i} data-id={item.i}>
             <FlowLayout
-              layouts={layouts}
               layoutItem={item}
-              droppingItem={isDropContainer ? droppingContainer : droppingItem}
               EmptyContainer={EmptyContainer}
               onDrop={onFlowLayoutDrop}
               onHover={onFlowLayoutHover}
@@ -290,7 +249,7 @@ export const Default: React.FC = () => {
         </div>
       );
     },
-    [layouts, isDropContainer]
+    [layouts]
   );
 
   const filterLayouts = (layouts, layoutItem) => {
@@ -298,24 +257,36 @@ export const Default: React.FC = () => {
     const cloneData = JSON.parse(JSON.stringify(layouts));
     for (let index = 0; index < cloneData.length; index++) {
       const item = cloneData[index];
-      if (item.i === layoutItem.parentId) {
-        item.children = item.children.filter((child) => child.i !== layoutItem.i);
-      } else if (checkArray(item.children)) {
-        item.children = filterLayouts(item.children, layoutItem);
+      if (item.isContainer) {
+        item.children = item.children.filter((i) => i !== layoutItem.i);
       }
+      // if (item.i === layoutItem.parentId) {
+      //   item.children = item.children.filter((child) => child.i !== layoutItem.i);
+      // } else if (checkArray(item.children)) {
+      //   item.children = filterLayouts(item.children, layoutItem);
+      // }
     }
 
     return cloneData;
   };
 
+  const onFlowLayoutDrop = (layoutItem: any, preLayoutItem: any, draggingItem: any) => {
+    console.log(layoutItem, preLayoutItem, '===');
+    // 如果组件是从网格布局中拖入到流式容器内，那么原有网格布局中的组件，应该删除
+    const tempLayouts = layouts.filter((item) => item.i !== draggingItem.i);
+    // 根据layoutItem，获取最新的layouts
+    const newLayouts = getNewLayouts(tempLayouts, layoutItem, preLayoutItem);
+    console.log(newLayouts, '======');
+    setLayouts(newLayouts);
+  };
+
   const onDrop1 = (_layouts, layoutItem, dragInfo, group) => {
     if (dragInfo.type !== group) {
       let newLayouts = _layouts;
-      if (layoutItem?.parentId) {
-        newLayouts = filterLayouts(newLayouts, layoutItem);
-        delete layoutItem.parentId;
-      }
+      newLayouts = filterLayouts(newLayouts, layoutItem);
+
       newLayouts.push(layoutItem);
+
       setLayouts(newLayouts.slice());
     }
   };
@@ -340,7 +311,7 @@ export const Default: React.FC = () => {
         return (
           <div data-grid={item}>
             <Layout
-              nested={true}
+              nested
               rowHeight={1}
               group={`${DEFAULT_GROUP}__${item.i}`}
               layouts={layouts3}
@@ -386,26 +357,17 @@ export const Default: React.FC = () => {
     ref1.current.resize();
   }, []);
 
-  const onFlowLayoutDrop1 = (layouts: any, layoutItem: any) => {
-    setFlowLayouts(layouts);
-  };
-
-  const onFlowLayoutDrop = (layouts: any, layoutItem: any) => {
-    const newLayouts = layouts.filter((item) => item.i !== layoutItem.i);
-    setLayouts(newLayouts);
-  };
-
-  const onDragStartBox = (item) => {
+  const onDragStartBox = () => {
     setIsDropContainer(false);
   };
 
-  const onDragStartCon = (item) => {
+  const onDragStartCon = () => {
     setIsDropContainer(true);
   };
   return (
     <Provider>
-      <Draggable onDragStart={onDragStartBox}>Box1</Draggable>
-      <Draggable onDragStart={onDragStartBox}>Box2</Draggable>
+      <Draggable onDragStart={onDragStartBox}>组件1</Draggable>
+      <Draggable onDragStart={onDragStartBox}>组件2</Draggable>
       <Draggable onDragStart={onDragStartCon}>容器</Draggable>
       <div style={{ marginBottom: 20 }}>
         <button onClick={onClick}>change Layout</button>

@@ -24,8 +24,6 @@ export interface LayoutItem extends DragItem {
   children?: FlowLayoutItem[];
 }
 
-export type LayoutItemType = FlowLayoutItem | LayoutItem;
-
 export interface DroppingItem {
   i: string;
   w: number;
@@ -143,20 +141,25 @@ export interface FlowLayoutItem {
   [key: string]: any;
 }
 
-export type ItemType = LayoutItem | FlowLayoutItem;
-
-export interface FlowLayoutProps {
-  layouts: LayoutItem[];
+export interface FlowLayoutProps extends React.Attributes {
   layoutItem: FlowLayoutItem;
-  droppingItem: ItemType;
   droppable?: boolean;
-  EmptyContainer?: React.ComponentType;
-  onDrop?: (layouts: LayoutItem[], item: ItemType) => void;
+  EmptyContainer: React.ComponentType;
+  onDrop?: (
+    layoutItem: FlowLayoutItem,
+    preLayoutItem: FlowLayoutItem,
+    item: LayoutItemType,
+    itemType: string
+  ) => void;
   onHover?: (item: LayoutItem | FlowLayoutItem, itemType: string) => void;
+  onDragStart?: (draggedItem: DragItem) => void;
+  onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;
+  [key: string]: any;
 }
 
 export interface FlowLayoutItemProps {
-  data: ItemType;
+  data: LayoutItemType;
+  type?: string;
   onDragStart?: (draggedItem: DragItem) => void;
   onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;
 }
@@ -166,3 +169,5 @@ export interface indicatorInfo {
   index: number;
   where: 'before' | 'after';
 }
+
+export type LayoutItemType = FlowLayoutItem | LayoutItem;

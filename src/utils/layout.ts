@@ -555,3 +555,20 @@ export function observeDom(el: HTMLElement, callback) {
   observer.observe(el, { subtree: true, childList: true });
   return observer;
 }
+
+export function UUID(len = 32) {
+  return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'
+    .replace(/[xy]/g, (c, index) => {
+      /* eslint-disable no-bitwise */
+      let r = (Math.random() * 16) | 0;
+      let v = c === 'x' ? r : (r & 0x3) | 0x8;
+
+      while (index === 0 && v < 10) {
+        r = (Math.random() * 16) | 0;
+        v = c === 'x' ? r : (r & 0x3) | 0x8;
+      }
+
+      return v.toString(16);
+    })
+    .substring(0, len);
+}
