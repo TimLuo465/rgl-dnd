@@ -13,7 +13,7 @@ import {
   DEFAULT_ROWHEIGHT,
   prefixCls,
 } from '../constants';
-import { DragItem, InternalEventType, LayoutItem, LayoutProps } from '../types';
+import { DragItem, InternalEventType, LayoutItem, LayoutItemType, LayoutProps } from '../types';
 import {
   calcGridItemPosition,
   calcH,
@@ -177,6 +177,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     event.on('dragEnd.cardItem', this.onCardItemDragEnd);
     event.on('onFlowLayoutHover', this.onFlowLayoutHover);
     event.on('onFlowLayoutDrop', this.onFlowLayoutDrop);
+    event.on('onFlowLayoutNotDrop', this.onFlowLayoutNotDrop);
     this.onLayoutMaybeChanged(this.state.layouts, this.props.layouts, false);
     this.event.emit('mounted');
     this.observeContainer(this.state.layouts);
@@ -201,6 +202,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     window.removeEventListener('resize', this.resize);
     event.off('dragEnd.cardItem', this.onCardItemDragEnd);
     event.off('onFlowLayoutHover', this.onFlowLayoutHover);
+    event.off('onFlowLayoutDrop', this.onFlowLayoutDrop);
+    event.off('onFlowLayoutNotDrop', this.onFlowLayoutNotDrop);
   }
 
   observeCallback(el: HTMLElement, item: LayoutItem) {
@@ -245,10 +248,21 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     }
   };
 
-  onFlowLayoutDrop = (layoutItem: any) => {
+  onFlowLayoutDrop = (layoutItem: LayoutItemType) => {
     // 流式容器drop的时候，清空状态
     const { draggingItem } = this.state;
     this.resetDraggingState(layoutItem.i || draggingItem.i);
+  };
+
+  onFlowLayoutNotDrop = (itemType: string) => {
+    const { draggingItem } = this.state;
+    if (draggingItem.i) {
+      this.resetDraggingState(draggingItem.i);
+      if (![DEFAULT_FLOW_LAYOUT, DEFAULT_ITEMTYPE].includes(itemType)) {
+        // 如果是网格布局中的组件拖入到流式布局，那么原有网格布局中的组件在hover的时候需要隐藏
+        setComDisplay(draggingItem.i, 'block');
+      }
+    }
   };
 
   // isUserAction - if true, it maybe drop, resize or swap, if false, it maybe correctBounds

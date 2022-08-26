@@ -1,5 +1,5 @@
-import { DEFAULT_GROUP, DEFAULT_ITEMTYPE, prefixCls } from '../constants';
-import { LayoutItem, LayoutItemType } from '../types';
+import { prefixCls } from '../constants';
+import { LayoutItem } from '../types';
 
 /**
  * 检查对象是否为空
@@ -20,11 +20,7 @@ export const checkArray = (data: any) => {
 /**
  * 流式布局内组件更新后，获取新的layouts
  */
-export const getNewLayouts = (
-  data: LayoutItem[],
-  layoutItem: LayoutItem,
-  preLayoutItem?: LayoutItem
-) => {
+export const getNewLayouts = (data: LayoutItem[], layoutItem: LayoutItem) => {
   if (!checkArray(data)) return data;
 
   const cloneData = JSON.parse(JSON.stringify(data));
@@ -33,35 +29,8 @@ export const getNewLayouts = (
     if (item.i === layoutItem.i) {
       item.children = layoutItem.children;
     }
-    if (item.i === preLayoutItem?.i) {
-      item.children = preLayoutItem.children;
-    }
-    // if (checkArray(item.children)) {
-    //   item.children = getNewLayouts(item.children, layoutItem, preLayoutItem);
-    // }
   }
   return cloneData;
-};
-
-/**
- * 获取layoutItem
- */
-export const getFlowLayoutItem = (layouts: LayoutItemType[], id: string) => {
-  let layoutItem: LayoutItemType | null = null;
-  for (let index = 0; index < layouts.length; index++) {
-    const item: LayoutItemType = layouts[index];
-    if (item.i === id) {
-      layoutItem = item;
-      break;
-    }
-    if (checkArray(item.children)) {
-      const tempItem = getFlowLayoutItem(item.children, id);
-      if (tempItem) {
-        layoutItem = tempItem;
-      }
-    }
-  }
-  return layoutItem;
 };
 
 /**
@@ -125,13 +94,4 @@ export const addRGLEventListener = <K extends keyof HTMLElementEventMap>(
   el.addEventListener(eventName, bindedListener);
 
   return () => el.removeEventListener(eventName, bindedListener);
-};
-
-// 根据groupIndex获取accept
-export const getGroupKeys = (index) => {
-  const groupKeys = [DEFAULT_ITEMTYPE];
-  for (let i = 0; i <= index; i++) {
-    groupKeys.push(`${DEFAULT_GROUP}_${i}`);
-  }
-  return groupKeys;
 };

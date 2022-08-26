@@ -1,7 +1,8 @@
 import React, { CSSProperties, ReactNode } from 'react';
-import { XYCoord } from 'react-dnd';
+import { ConnectDragSource, XYCoord } from 'react-dnd';
 import { ResizeHandle } from 'react-resizable';
 
+export type RefType = { drag: ConnectDragSource };
 export interface DragItem {
   i?: string;
   static?: boolean;
@@ -21,7 +22,7 @@ export interface LayoutItem extends DragItem {
   autoHeight?: boolean;
   placeholder?: boolean;
   isContainer?: boolean;
-  children?: FlowLayoutItem[];
+  children?: string[];
 }
 
 export interface DroppingItem {
@@ -136,21 +137,15 @@ export type InternalEventType = 'mounted';
 
 export interface FlowLayoutItem {
   i: string;
-  parentId?: string;
-  children?: FlowLayoutItem[];
+  children?: string[];
   [key: string]: any;
 }
 
 export interface FlowLayoutProps extends React.Attributes {
   layoutItem: FlowLayoutItem;
-  droppable?: boolean;
+  canDrop?: boolean;
   EmptyContainer: React.ComponentType;
-  onDrop?: (
-    layoutItem: FlowLayoutItem,
-    preLayoutItem: FlowLayoutItem,
-    item: LayoutItemType,
-    itemType: string
-  ) => void;
+  onDrop?: (layoutItem: LayoutItemType, item: LayoutItemType, itemType: string) => void;
   onHover?: (item: LayoutItem | FlowLayoutItem, itemType: string) => void;
   onDragStart?: (draggedItem: DragItem) => void;
   onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;
@@ -160,6 +155,7 @@ export interface FlowLayoutProps extends React.Attributes {
 export interface FlowLayoutItemProps {
   data: LayoutItemType;
   type?: string;
+  children?: ReactNode;
   onDragStart?: (draggedItem: DragItem) => void;
   onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;
 }

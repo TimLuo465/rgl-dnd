@@ -16,11 +16,7 @@ const mockLayouts = [
     y: 0,
     w: 3,
     h: 10,
-    // scope: '',
     selected: false,
-    // minH: 3,
-    // minW: 1,
-    // plachodler: true,
   },
 ];
 
@@ -64,8 +60,6 @@ const mockFlowLayouts = [
     ],
   },
 ];
-
-// const comKey = '11';
 
 const containerStyle: CSSProperties = {
   float: 'left',
@@ -147,6 +141,25 @@ export const Default: React.FC = () => {
     });
   };
 
+  type BoxProps = {
+    [key: string]: any;
+  };
+
+  const Box: React.FC<BoxProps> = (props) => {
+    const { item, drag } = props;
+
+    useEffect(() => {
+      const el = document.querySelector(`div[data-id=${item}]`);
+      drag?.(el);
+    }, []);
+    return (
+      <div data-id={item} style={{ border: '1px solid #ddd', height: '80px' }}>
+        {item.substring(1, 5)}
+        {/* {renderFlowLayout(item.children)} */}
+      </div>
+    );
+  };
+
   const renderFlowLayoutItem = (item, index) => {
     // if (index % 2 === 0) {
     //   return (
@@ -165,26 +178,18 @@ export const Default: React.FC = () => {
     //     />
     //   );
     // }
-    return (
-      <div
-        data-flow={{ i: item }}
-        key={item}
-        data-id={item}
-        style={{ border: '1px solid #ddd', height: '80px' }}
-      >
-        {item.substring(1, 5)}
-        {/* {renderFlowLayout(item.children)} */}
-      </div>
-    );
+    return <Box item={item} data-flow={{ i: item }} key={item}></Box>;
   };
 
   const EmptyContainer: React.FC = () => {
     return (
       <div
         style={{
-          height: '80px',
-          lineHeight: '80px',
+          height: '90px',
+          lineHeight: '90px',
           textAlign: 'center',
+          color: '#a7b1bd',
+          border: '1px dashed red',
         }}
       >
         请拖入组件
@@ -270,13 +275,12 @@ export const Default: React.FC = () => {
     return cloneData;
   };
 
-  const onFlowLayoutDrop = (layoutItem: any, preLayoutItem: any, draggingItem: any) => {
-    console.log(layoutItem, preLayoutItem, '===');
+  const onFlowLayoutDrop = (layoutItem: any, draggingItem: any) => {
     // 如果组件是从网格布局中拖入到流式容器内，那么原有网格布局中的组件，应该删除
     const tempLayouts = layouts.filter((item) => item.i !== draggingItem.i);
     // 根据layoutItem，获取最新的layouts
-    const newLayouts = getNewLayouts(tempLayouts, layoutItem, preLayoutItem);
-    console.log(newLayouts, '======');
+    const newLayouts = getNewLayouts(tempLayouts, layoutItem);
+
     setLayouts(newLayouts);
   };
 
