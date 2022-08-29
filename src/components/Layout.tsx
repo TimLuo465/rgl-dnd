@@ -256,7 +256,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
   onFlowLayoutNotDrop = (itemType: string) => {
     const { draggingItem } = this.state;
-    if (draggingItem.i) {
+    if (draggingItem) {
       this.resetDraggingState(draggingItem.i);
       if (![DEFAULT_FLOW_LAYOUT, DEFAULT_ITEMTYPE].includes(itemType)) {
         // 如果是网格布局中的组件拖入到流式布局，那么原有网格布局中的组件在hover的时候需要隐藏

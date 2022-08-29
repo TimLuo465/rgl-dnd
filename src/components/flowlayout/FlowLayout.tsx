@@ -25,9 +25,10 @@ let indicator: indicatorInfo = {
 const FlowLayout: React.FC<FlowLayoutProps> = (props, ref) => {
   const {
     layoutItem,
-    canDrop = false,
+    canDrop = true,
     EmptyContainer,
     onDrop,
+    onNotDrop,
     onHover,
     onDragStart,
     onDragEnd,
@@ -89,6 +90,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = (props, ref) => {
     (dragItem: LayoutItemType, itemType: string) => {
       if (!canDrop) {
         event.emit('onFlowLayoutNotDrop', itemType);
+        onNotDrop?.(dragItem, itemType);
         return;
       }
       // 如果当前正在拖动的组件，就是当前容器，那么不触发drop事件

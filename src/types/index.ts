@@ -146,6 +146,7 @@ export interface FlowLayoutProps extends React.Attributes {
   canDrop?: boolean;
   EmptyContainer: React.ComponentType;
   onDrop?: (layoutItem: LayoutItemType, item: LayoutItemType, itemType: string) => void;
+  onNotDrop?: (item?: LayoutItemType, itemType?: string) => void;
   onHover?: (item: LayoutItem | FlowLayoutItem, itemType: string) => void;
   onDragStart?: (draggedItem: DragItem) => void;
   onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;
