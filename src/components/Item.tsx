@@ -71,10 +71,10 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
     e.stopPropagation();
 
     // 上下拖拽时，确保w不变
-    if (direction === 'w' || direction === 's') {
+    if (direction === 'n' || direction === 's') {
       wh.w = data.w;
       // 左右拖拽时，确保h不变
-    } else if (direction === 'e' || direction === 'n') {
+    } else if (direction === 'e' || direction === 'w') {
       wh.h = data.h;
     }
 
