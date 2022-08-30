@@ -2,10 +2,10 @@ import { EventEmitter } from 'eventemitter3';
 
 type EventType =
   | 'dragEnd.cardItem'
-  | 'onFlowLayoutHover'
-  | 'onLayoutHover'
-  | 'onFlowLayoutDrop'
-  | 'onFlowLayoutNotDrop';
+  | 'hover.flowLayout'
+  | 'hover.layout'
+  | 'drop.flowLayout'
+  | 'unDrop.flowLayout';
 
 const event = new EventEmitter<EventType>();
 

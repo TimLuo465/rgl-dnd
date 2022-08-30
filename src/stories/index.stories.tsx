@@ -27,37 +27,6 @@ const mockFlowLayouts = [
     type: 'flow-container',
     isContainer: true,
     parentId: 'ROOT',
-    children: [
-      '398767893432',
-      '987654345678',
-      // {
-      //   i: '398767893432',
-      //   nodeId: '1112',
-      //   type: 'com',
-      //   parentId: '1111111111111111',
-      // },
-      // {
-      //   i: '987654345678',
-      //   nodeId: '11122',
-      //   type: 'com',
-      //   parentId: '1111111111111111',
-      // },
-      // {
-      //   i: '222222222222222',
-      //   nodeId: '1113',
-      //   type: 'flow-container',
-      //   isContainer: true,
-      //   parentId: '1111111111111111',
-      //   children: [
-      //     {
-      //       i: '1234567899',
-      //       nodeId: '11133',
-      //       type: 'com',
-      //       parentId: '222222222222222',
-      //     },
-      //   ],
-      // },
-    ],
   },
 ];
 
@@ -130,7 +99,7 @@ export const Default: React.FC = () => {
               layouts={layouts}
               layoutItem={item}
               onDrop={onFlowLayoutDrop}
-              EmptyContainer={EmptyContainer}
+              empty={EmptyContainer}
             >
               {renderFlowLayout(item.children)}
             </FlowLayout>
@@ -231,6 +200,20 @@ export const Default: React.FC = () => {
   //   });
   // };
 
+  const onLayoutChange = useCallback(
+    (newLayoutItem: any) => {
+      const newLayouts = layouts.map((item: any) => {
+        if (item.i === newLayoutItem.i) {
+          item.h = newLayoutItem.h;
+          return item;
+        }
+        return item;
+      });
+      setLayouts(newLayouts);
+    },
+    [layouts]
+  );
+
   const renderItem1 = useCallback(
     (item) => {
       if (item.isContainer) {
@@ -238,9 +221,10 @@ export const Default: React.FC = () => {
           <div data-grid={item} key={item.i} data-id={item.i}>
             <FlowLayout
               layoutItem={item}
-              EmptyContainer={EmptyContainer}
+              empty={<EmptyContainer />}
               onDrop={onFlowLayoutDrop}
               onHover={onFlowLayoutHover}
+              onLayoutChange={onLayoutChange}
             >
               {renderFlowLayout(item.children)}
             </FlowLayout>

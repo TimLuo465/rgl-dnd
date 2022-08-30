@@ -13,10 +13,9 @@ import {
   DEFAULT_ROWHEIGHT,
   prefixCls,
 } from '../constants';
-import { DragItem, InternalEventType, LayoutItem, LayoutItemType, LayoutProps } from '../types';
+import { DragItem, InternalEventType, LayoutItem, LayoutProps } from '../types';
 import {
   calcGridItemPosition,
-  calcH,
   calcLayoutByProps,
   calcLeftSpacing,
   calcXY,
@@ -28,9 +27,7 @@ import {
   getScrollbar,
   getWH,
   isEqual,
-  isIdEqual,
   moveElement,
-  observeDom,
   pickLayoutItem,
   reLayout,
   setComDisplay,
@@ -175,12 +172,11 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     this.mounted = true;
     window.addEventListener('resize', this.resize);
     event.on('dragEnd.cardItem', this.onCardItemDragEnd);
-    event.on('onFlowLayoutHover', this.onFlowLayoutHover);
-    event.on('onFlowLayoutDrop', this.onFlowLayoutDrop);
-    event.on('onFlowLayoutNotDrop', this.onFlowLayoutNotDrop);
+    event.on('hover.flowLayout', this.onFlowLayoutHover);
+    event.on('drop.flowLayout', this.onFlowLayoutDrop);
+    event.on('unDrop.flowLayout', this.onFlowLayoutUnDrop);
     this.onLayoutMaybeChanged(this.state.layouts, this.props.layouts, false);
     this.event.emit('mounted');
-    this.observeContainer(this.state.layouts);
   }
 
   componentDidUpdate(prevProps: LayoutProps, prevState: LayoutStates) {
@@ -190,10 +186,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       return;
     }
 
-    if (!isIdEqual(prevProps.layouts, this.props.layouts)) {
-      this.observeContainer(layouts);
-    }
-
     this.onLayoutMaybeChanged(layouts, prevState.layouts, false);
   }
 
@@ -201,37 +193,9 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     delete groupLayouts[this.group];
     window.removeEventListener('resize', this.resize);
     event.off('dragEnd.cardItem', this.onCardItemDragEnd);
-    event.off('onFlowLayoutHover', this.onFlowLayoutHover);
-    event.off('onFlowLayoutDrop', this.onFlowLayoutDrop);
-    event.off('onFlowLayoutNotDrop', this.onFlowLayoutNotDrop);
-  }
-
-  observeCallback(el: HTMLElement, item: LayoutItem) {
-    return () => {
-      const height = el.clientHeight;
-      const positionParams = this.getPositionParams();
-      const h = calcH(positionParams, height, item.y);
-      const newLayouts = this.state.layouts.map((layoutItem: LayoutItem) => {
-        if (layoutItem.i === item.i) {
-          layoutItem.h = h;
-          return layoutItem;
-        }
-        return layoutItem;
-      });
-      this.setState({
-        layouts: newLayouts,
-      });
-      this.onLayoutMaybeChanged(newLayouts);
-    };
-  }
-
-  observeContainer(layouts: LayoutItem[]) {
-    layouts.forEach((item: LayoutItem) => {
-      const el = document.querySelector(`[data-id="${item.i}"]`) as HTMLElement;
-      if (!el || !item.autoHeight) return;
-      // 监听容器内部组件变化，重新计算高度和h值
-      observeDom(el, this.observeCallback(el, item));
-    });
+    event.off('hover.flowLayout', this.onFlowLayoutHover);
+    event.off('drop.flowLayout', this.onFlowLayoutDrop);
+    event.off('unDrop.flowLayout', this.onFlowLayoutUnDrop);
   }
 
   onFlowLayoutHover = (itemType: string) => {
@@ -248,13 +212,13 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     }
   };
 
-  onFlowLayoutDrop = (layoutItem: LayoutItemType) => {
+  onFlowLayoutDrop = (layoutItem: LayoutItem) => {
     // 流式容器drop的时候，清空状态
     const { draggingItem } = this.state;
     this.resetDraggingState(layoutItem.i || draggingItem.i);
   };
 
-  onFlowLayoutNotDrop = (itemType: string) => {
+  onFlowLayoutUnDrop = (itemType: string) => {
     const { draggingItem } = this.state;
     if (draggingItem) {
       this.resetDraggingState(draggingItem.i);
@@ -364,7 +328,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       this.props.onDragOver?.(layoutItem);
     }
 
-    event.emit('onLayoutHover');
+    event.emit('hover.layout');
   };
 
   calcXY(item: LayoutItem, offset: XYCoord) {
@@ -431,8 +395,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
         ...droppingItem,
         i: item.i || droppingItem.i,
       };
-
-      // const _item: any = checkObject(item) ? item : droppingItem;
 
       layoutItem = {
         ..._item,

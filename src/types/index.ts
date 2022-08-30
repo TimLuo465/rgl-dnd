@@ -135,26 +135,29 @@ export type CompactType = 'horizontal' | 'vertical';
 
 export type InternalEventType = 'mounted';
 
-export interface FlowLayoutItem {
-  i: string;
-  children?: string[];
-  [key: string]: any;
-}
+// export interface FlowLayoutItem {
+//   i: string;
+//   children?: string[];
+//   [key: string]: any;
+// }
 
 export interface FlowLayoutProps extends React.Attributes {
-  layoutItem: FlowLayoutItem;
+  layoutItem: LayoutItem;
   canDrop?: boolean;
-  EmptyContainer: React.ComponentType;
-  onDrop?: (layoutItem: LayoutItemType, item: LayoutItemType, itemType: string) => void;
-  onNotDrop?: (item?: LayoutItemType, itemType?: string) => void;
-  onHover?: (item: LayoutItem | FlowLayoutItem, itemType: string) => void;
+  rowHeight?: number;
+  maxRows?: number;
+  margin?: [number, number];
+  empty: React.ReactNode;
+  onDrop?: (layoutItem: LayoutItem, item: LayoutItem, itemType: string) => void;
+  onHover?: (item: LayoutItem, itemType: string) => void;
   onDragStart?: (draggedItem: DragItem) => void;
   onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;
+  onLayoutChange?: (layoutItem: LayoutItem) => void;
   [key: string]: any;
 }
 
 export interface FlowLayoutItemProps {
-  data: LayoutItemType;
+  data: LayoutItem;
   type?: string;
   children?: ReactNode;
   onDragStart?: (draggedItem: DragItem) => void;
@@ -166,5 +169,3 @@ export interface indicatorInfo {
   index: number;
   where: 'before' | 'after';
 }
-
-export type LayoutItemType = FlowLayoutItem | LayoutItem;
