@@ -1,6 +1,7 @@
 import lodashEqual from 'lodash.isequal';
+import { prefixCls } from '../constants';
 import { CompactType, DragItem, LayoutItem, PositionParams } from '../types';
-import { calcCP } from './calclate';
+import { calcCP } from './calculate';
 
 /**
  * Return the bottom coordinate of the layout.
@@ -503,11 +504,17 @@ export function pickLayoutItem({ i, x, y, h, w }: LayoutItem) {
   return { i, x, y, h, w };
 }
 
-export function isEqual(layouts1: LayoutItem[], layouts2: LayoutItem[]) {
-  const s1 = layouts1.map(pickLayoutItem);
-  const s2 = layouts2.map(pickLayoutItem);
-
+export function isIdEqual(layouts1: LayoutItem[], layouts2: LayoutItem[]) {
+  const s1 = layouts1?.map((item) => item.i);
+  const s2 = layouts2?.map((item) => item.i);
   return lodashEqual(s1, s2);
+}
+
+export function isEqual(layouts1: LayoutItem[], layouts2: LayoutItem[]) {
+  // const s1 = layouts1?.map(pickLayoutItem);
+  // const s2 = layouts2?.map(pickLayoutItem);
+
+  return lodashEqual(layouts1, layouts2);
 }
 
 export function cloneLayouts(layouts: LayoutItem[]) {
@@ -528,4 +535,40 @@ export function getScrollbar(node: HTMLElement): HTMLElement | null {
   }
 
   return null;
+}
+
+export function setComDisplay(i: string, state: string) {
+  const el = document.querySelector(`[data-id="${i}"]`) as HTMLElement;
+  if (el) (el.parentNode as HTMLElement).style.display = state;
+}
+
+export function setPlaceholderDisplay(state: string) {
+  const el = document.querySelector(`.${prefixCls}-placeholder`) as HTMLElement;
+  const condition = state === 'none' ? 'block' : 'none';
+  if (el && getComputedStyle(el).display === condition) {
+    el.style.display = state;
+  }
+}
+
+export function observeDom(el: HTMLElement, callback) {
+  const observer = new MutationObserver(callback);
+  observer.observe(el, { subtree: true, childList: true });
+  return observer;
+}
+
+export function UUID(len = 32) {
+  return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'
+    .replace(/[xy]/g, (c, index) => {
+      /* eslint-disable no-bitwise */
+      let r = (Math.random() * 16) | 0;
+      let v = c === 'x' ? r : (r & 0x3) | 0x8;
+
+      while (index === 0 && v < 10) {
+        r = (Math.random() * 16) | 0;
+        v = c === 'x' ? r : (r & 0x3) | 0x8;
+      }
+
+      return v.toString(16);
+    })
+    .substring(0, len);
 }

@@ -1,7 +1,8 @@
 import React, { CSSProperties, ReactNode } from 'react';
-import { XYCoord } from 'react-dnd';
+import { ConnectDragSource, XYCoord } from 'react-dnd';
 import { ResizeHandle } from 'react-resizable';
 
+export type RefType = { drag: ConnectDragSource };
 export interface DragItem {
   i?: string;
   static?: boolean;
@@ -18,7 +19,10 @@ export interface LayoutItem extends DragItem {
   maxW?: number;
   minH?: number;
   maxH?: number;
+  autoHeight?: boolean;
   placeholder?: boolean;
+  isContainer?: boolean;
+  children?: string[];
 }
 
 export interface DroppingItem {
@@ -36,7 +40,7 @@ export interface DroppableProps {
   accept?: string[];
   canDrop?: boolean;
   onDrop?: (item: unknown, itemType: string) => void;
-  onHover?: (item: unknown, offset: XYCoord, itemType: string) => void;
+  onHover?: (item: unknown, offset: XYCoord, itemType: string, clientOffset?: XYCoord) => void;
   children?: ReactNode;
 }
 
@@ -62,6 +66,7 @@ export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
   compactType?: CompactType;
   /** 组件拖动的时候超出设计器区域之外时总是被禁止,不会触发onDrop事件，默认true */
   allowOutBoundedDrop?: boolean;
+  isResetLayout?: boolean;
   onLayoutChange?: (layouts: LayoutItem[], isUserAction: boolean) => void;
   onDragStart?: (layoutItem: LayoutItem) => void;
   onDragOver?: (layoutItem: LayoutItem) => void;
@@ -87,7 +92,7 @@ export type Position = {
   left: number;
   top: number;
   width: number;
-  height: number;
+  height: number | 'auto';
 };
 
 export interface DraggableProps {
@@ -129,3 +134,31 @@ export type ItemStates = {
 export type CompactType = 'horizontal' | 'vertical';
 
 export type InternalEventType = 'mounted';
+export interface FlowLayoutProps extends React.Attributes {
+  layoutItem: LayoutItem;
+  canDrop?: boolean;
+  rowHeight?: number;
+  maxRows?: number;
+  margin?: [number, number];
+  empty: React.ReactNode;
+  onDrop?: (layoutItem: LayoutItem | null, item: LayoutItem, itemType: string) => void;
+  onHover?: (item: LayoutItem, itemType: string) => void;
+  onDragStart?: (draggedItem: DragItem) => void;
+  onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;
+  onLayoutChange?: (layoutItem: LayoutItem) => void;
+  [key: string]: any;
+}
+
+export interface FlowLayoutItemProps {
+  data: LayoutItem;
+  type?: string;
+  children?: ReactNode;
+  onDragStart?: (draggedItem: DragItem) => void;
+  onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;
+}
+
+export interface indicatorInfo {
+  el: HTMLElement | null;
+  index: number;
+  where: 'before' | 'after';
+}

@@ -5,6 +5,7 @@ import {
   DEFAULT_COLS,
   DEFAULT_CONTAINER_PADDING,
   DEFAULT_DROPPINGITEM,
+  DEFAULT_FLOW_LAYOUT,
   DEFAULT_GROUP,
   DEFAULT_ITEMTYPE,
   DEFAULT_MARGIN,
@@ -29,14 +30,16 @@ import {
   moveElement,
   pickLayoutItem,
   reLayout,
+  setComDisplay,
+  setPlaceholderDisplay,
   setTransform,
   withLayoutItem,
 } from '../utils';
 import Droppable from './Droppable';
 import event from './event';
 import Item from './Item';
+import { layoutContext, layoutStore } from './LayoutContext';
 import './styles/layout.less';
-
 interface LayoutStates {
   offset: DOMRect | null;
   accept: string[];
@@ -67,6 +70,8 @@ let groupIndex = 0;
 let hoveredGroups = [];
 
 class Layout extends React.Component<LayoutProps, LayoutStates> {
+  isHoverFlowLayout = false;
+
   group = '';
 
   mounted = false;
@@ -83,9 +88,10 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
   static defaultProps: LayoutProps;
 
+  static contextType = layoutContext;
+
   constructor(props: LayoutProps) {
     super(props);
-
     const { group, layouts, compactType, cols } = props;
 
     this.group = group || `${DEFAULT_GROUP}_${groupIndex}`;
@@ -95,6 +101,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     groupLayouts[this.group] = this;
     groupKeys = Object.keys(groupLayouts);
     groupKeys.push(DEFAULT_ITEMTYPE);
+    // 流式容器默认group
+    groupKeys.push(DEFAULT_FLOW_LAYOUT);
 
     // use default group
     if (!group) {
@@ -131,6 +139,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       prevPosition: null,
       placeholder: null,
     };
+
+    layoutStore.setGroups(groupKeys);
   }
 
   static getDerivedStateFromProps(props, prevState: LayoutStates) {
@@ -141,7 +151,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
     const { layouts, cols, compactType } = props;
     const { layouts: _layouts } = prevState;
-
     if (!isEqual(layouts, _layouts)) {
       return {
         layouts: reLayout(layouts, compactType, cols),
@@ -163,6 +172,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     this.mounted = true;
     window.addEventListener('resize', this.resize);
     event.on('dragEnd.cardItem', this.onCardItemDragEnd);
+    event.on('hover.flowLayout', this.onFlowLayoutHover);
+    event.on('drop.flowLayout', this.onFlowLayoutDrop);
     this.onLayoutMaybeChanged(this.state.layouts, this.props.layouts, false);
     this.event.emit('mounted');
   }
@@ -181,7 +192,37 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     delete groupLayouts[this.group];
     window.removeEventListener('resize', this.resize);
     event.off('dragEnd.cardItem', this.onCardItemDragEnd);
+    event.off('hover.flowLayout', this.onFlowLayoutHover);
+    event.off('drop.flowLayout', this.onFlowLayoutDrop);
   }
+
+  onFlowLayoutHover = (itemType: string) => {
+    if (this.isHoverFlowLayout) return;
+    this.isHoverFlowLayout = true;
+    const { draggingItem } = this.state;
+    if (draggingItem) {
+      // 移入流式容器时候，隐藏占位符
+      setPlaceholderDisplay('none');
+      if (![DEFAULT_FLOW_LAYOUT, DEFAULT_ITEMTYPE].includes(itemType)) {
+        // 如果是网格布局中的组件拖入到流式布局，那么原有网格布局中的组件在hover的时候需要隐藏
+        setComDisplay(draggingItem.i, 'none');
+      }
+    }
+  };
+
+  onFlowLayoutDrop = (layoutItem: LayoutItem | null, itemType: string) => {
+    // 流式容器drop的时候，清空状态
+    const { draggingItem } = this.state;
+    if (layoutItem) {
+      this.resetDraggingState(layoutItem.i);
+    } else if (draggingItem) {
+      this.resetDraggingState(draggingItem.i);
+      if (![DEFAULT_FLOW_LAYOUT, DEFAULT_ITEMTYPE].includes(itemType)) {
+        // 如果是网格布局中的组件拖入到流式布局，那么原有网格布局中的组件在hover的时候需要隐藏
+        setComDisplay(draggingItem.i, 'block');
+      }
+    }
+  };
 
   // isUserAction - if true, it maybe drop, resize or swap, if false, it maybe correctBounds
   onLayoutMaybeChanged(newLayouts: LayoutItem[], _oldLayouts?: LayoutItem[], isUserAction = true) {
@@ -253,6 +294,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   };
 
   hover = (item: DragItem, offset: XYCoord, itemType: string) => {
+    this.isHoverFlowLayout = false;
+    setPlaceholderDisplay('block');
     const { layouts } = this.state;
     let layoutItem: LayoutItem | null = null;
 
@@ -279,6 +322,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     if (layoutItem) {
       this.props.onDragOver?.(layoutItem);
     }
+
+    event.emit('hover.layout');
   };
 
   calcXY(item: LayoutItem, offset: XYCoord) {
@@ -299,9 +344,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
     const { layouts, prevPosition } = this.state;
     const position = this.calcXY(layoutItem, offset);
-
     layoutItem.placeholder = true;
-
     if (position.x === prevPosition?.x && position.y === prevPosition?.y) {
       return;
     }
@@ -337,7 +380,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     const { droppingItem } = this.props;
     const { draggingItem, layouts } = this.state;
     let layoutItem: LayoutItem;
-
     if (!draggingItem) {
       if (!droppingItem) {
         return null;
@@ -374,7 +416,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     const { group } = this;
     const { layouts } = this.state;
     let layoutItem = getLayoutItem(layouts, item.i);
-
     // drag group item to other group
     if (!layoutItem) {
       if (itemType !== group) {
@@ -406,17 +447,15 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     const { draggingItem, layouts } = this.state;
     const index = layouts.findIndex((l) => l.i === draggingItem.i);
     const layoutItem = layouts[index];
-
     delete layoutItem.placeholder;
 
     // group layout change
     if (itemType === this.group) {
       this.onLayoutMaybeChanged(layouts, this.oldLayouts);
     } else {
-      // new card item or other group item
+      // // new card item or other group item
       const index = layouts.findIndex((l) => l.i === draggingItem.i);
       const sourceLayout = groupLayouts[itemType];
-
       // remove dragitem from layout
       // use ondrop to custom handle layouts change when drag new item
       layouts.splice(index, 1);
@@ -431,6 +470,9 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     }
 
     this.resetDraggingState(draggingItem.i);
+
+    setComDisplay(draggingItem.i, 'block');
+
     this.props.onDrop?.(layouts, layoutItem, { item: dragItem, type: itemType }, this.group);
   };
 
@@ -486,13 +528,11 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     if (!draggingItem) {
       return;
     }
-
     if (!didDrop) {
       // 判断是否是新增以及是否允许超出边界拖入
       if (allowOutBoundedDrop) {
         const isDrop = !this.oldLayouts.find((layout) => layout.i === draggingItem.i);
-
-        if (isDrop) {
+        if (isDrop && !this.isHoverFlowLayout) {
           this.onDrop(item, itemType);
         } else {
           this.setState({
@@ -525,7 +565,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     } else {
       // drop on layout, but not emit onDrop
       // maybe nested layout, so trigger onDrop manual
-      this.onDrop(item, itemType);
+      !this.isHoverFlowLayout && this.onDrop(item, itemType);
     }
   };
 
@@ -541,7 +581,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
           (layoutItem) => layoutItem.i !== l.i
         );
         hasCollisions = collisions.length > 0;
-
         // If we're colliding, we need adjust the placeholder.
         if (hasCollisions) {
           // adjust w && h to maximum allowed space
@@ -627,12 +666,12 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       return null;
     }
     const { layouts } = this.state;
+
     const { i, x, y } = placeholder;
     const positionParams = this.getPositionParams();
     const leftSpacing = calcLeftSpacing(layouts, placeholder);
     const { w, h } = getWH(placeholder, this.getPositionParams(), leftSpacing);
     const position = calcGridItemPosition(positionParams, x, y, w, h);
-
     return <div key={i} className={`${prefixCls}-placeholder`} style={setTransform(position)} />;
   };
 
@@ -643,7 +682,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     return React.Children.map(children, (child: React.ReactElement) => {
       const l = child.props['data-grid'];
       let item: LayoutItem;
-
       if (!l || child.type !== 'div') {
         return null;
       }
@@ -693,6 +731,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   render() {
     const { layouts, accept, placeholder } = this.state;
     const { style, margin, rowHeight, containerPadding, droppable, className } = this.props;
+
     const clsNameStr = `${prefixCls} ${className}`.trim();
     const containerStyle: CSSProperties = {
       height: getContainerHeight(layouts, {
