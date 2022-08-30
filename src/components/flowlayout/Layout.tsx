@@ -109,6 +109,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
     if (!canDrop) {
       event.emit('drop.flowLayout', null, itemType);
       onDrop(null, dragItem, itemType);
+      return;
     }
     // 如果当前正在拖动的组件，就是当前容器，那么不触发drop事件
     if (dragItem.i === layoutItem.i) return;
