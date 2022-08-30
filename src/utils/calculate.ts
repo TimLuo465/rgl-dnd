@@ -160,7 +160,7 @@ export function calcWH(
   return { w, h };
 }
 
-export function calcH(positionParams: Partial<PositionParams>, height: number, y: number): number {
+export function calcH(positionParams: PositionParams, height: number, y: number): number {
   const { margin, maxRows, rowHeight } = positionParams;
 
   // Math.round will cause rowHeight not work well
