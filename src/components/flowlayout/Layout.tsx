@@ -7,9 +7,8 @@ import {
   DEFAULT_MAXROWS,
   prefixCls,
 } from '../../constants';
-import { DragItem, FlowLayoutProps, indicatorInfo, LayoutItem, PositionParams } from '../../types';
+import { DragItem, FlowLayoutProps, indicatorInfo, LayoutItem } from '../../types';
 import {
-  calcH,
   checkArray,
   findPosition,
   getDOMInfo,
@@ -56,7 +55,6 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
     onHover,
     onDragStart,
     onDragEnd,
-    onLayoutChange,
     children,
   } = props;
 
@@ -182,31 +180,6 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
     return () => {
       event.off('dragEnd.cardItem', resetIndicator);
       event.off('hover.layout', resetIndicator);
-    };
-  }, []);
-
-  const handleObserve = useEvent(() => {
-    const height = containerRef.current.clientHeight;
-    const positionParams: Partial<PositionParams> = {
-      margin,
-      rowHeight,
-      maxRows,
-    };
-
-    const h = calcH(positionParams, height, layoutItem.y);
-    if (layoutItem.h !== h) {
-      const newLayoutItem = { ...layoutItem, h };
-      onLayoutChange?.(newLayoutItem);
-    }
-  });
-
-  useEffect(() => {
-    const el = containerRef.current;
-    const observer = new MutationObserver(handleObserve);
-    observer.observe(containerRef.current, { subtree: true, childList: true });
-
-    return () => {
-      observer.disconnect();
     };
   }, []);
 
