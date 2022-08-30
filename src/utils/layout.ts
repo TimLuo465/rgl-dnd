@@ -1,7 +1,7 @@
 import lodashEqual from 'lodash.isequal';
 import { prefixCls } from '../constants';
 import { CompactType, DragItem, LayoutItem, PositionParams } from '../types';
-import { calcCP } from './calclate';
+import { calcCP } from './calculate';
 
 /**
  * Return the bottom coordinate of the layout.

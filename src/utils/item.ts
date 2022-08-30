@@ -1,5 +1,5 @@
 import { LayoutItem, Position, PositionParams } from '../types';
-import { clamp } from './calclate';
+import { clamp } from './calculate';
 
 type TransformStyle = {
   transform: string;

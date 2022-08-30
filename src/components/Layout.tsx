@@ -174,7 +174,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     event.on('dragEnd.cardItem', this.onCardItemDragEnd);
     event.on('hover.flowLayout', this.onFlowLayoutHover);
     event.on('drop.flowLayout', this.onFlowLayoutDrop);
-    event.on('unDrop.flowLayout', this.onFlowLayoutUnDrop);
     this.onLayoutMaybeChanged(this.state.layouts, this.props.layouts, false);
     this.event.emit('mounted');
   }
@@ -195,7 +194,6 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     event.off('dragEnd.cardItem', this.onCardItemDragEnd);
     event.off('hover.flowLayout', this.onFlowLayoutHover);
     event.off('drop.flowLayout', this.onFlowLayoutDrop);
-    event.off('unDrop.flowLayout', this.onFlowLayoutUnDrop);
   }
 
   onFlowLayoutHover = (itemType: string) => {
@@ -212,15 +210,12 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     }
   };
 
-  onFlowLayoutDrop = (layoutItem: LayoutItem) => {
+  onFlowLayoutDrop = (layoutItem: LayoutItem | null, itemType: string) => {
     // 流式容器drop的时候，清空状态
     const { draggingItem } = this.state;
-    this.resetDraggingState(layoutItem.i || draggingItem.i);
-  };
-
-  onFlowLayoutUnDrop = (itemType: string) => {
-    const { draggingItem } = this.state;
-    if (draggingItem) {
+    if (layoutItem) {
+      this.resetDraggingState(layoutItem.i);
+    } else if (draggingItem) {
       this.resetDraggingState(draggingItem.i);
       if (![DEFAULT_FLOW_LAYOUT, DEFAULT_ITEMTYPE].includes(itemType)) {
         // 如果是网格布局中的组件拖入到流式布局，那么原有网格布局中的组件在hover的时候需要隐藏

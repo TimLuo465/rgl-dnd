@@ -134,13 +134,6 @@ export type ItemStates = {
 export type CompactType = 'horizontal' | 'vertical';
 
 export type InternalEventType = 'mounted';
-
-// export interface FlowLayoutItem {
-//   i: string;
-//   children?: string[];
-//   [key: string]: any;
-// }
-
 export interface FlowLayoutProps extends React.Attributes {
   layoutItem: LayoutItem;
   canDrop?: boolean;
@@ -148,7 +141,7 @@ export interface FlowLayoutProps extends React.Attributes {
   maxRows?: number;
   margin?: [number, number];
   empty: React.ReactNode;
-  onDrop?: (layoutItem: LayoutItem, item: LayoutItem, itemType: string) => void;
+  onDrop?: (layoutItem: LayoutItem | null, item: LayoutItem, itemType: string) => void;
   onHover?: (item: LayoutItem, itemType: string) => void;
   onDragStart?: (draggedItem: DragItem) => void;
   onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;

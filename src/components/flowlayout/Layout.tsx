@@ -107,13 +107,12 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
   // drop时，更新layouts
   const handleDrop = useEvent((dragItem: LayoutItem, itemType: string) => {
     if (!canDrop) {
-      event.emit('unDrop.flowLayout', itemType);
-      return;
+      event.emit('drop.flowLayout', null, itemType);
+      onDrop(null, dragItem, itemType);
     }
     // 如果当前正在拖动的组件，就是当前容器，那么不触发drop事件
     if (dragItem.i === layoutItem.i) return;
     const draggingItem = { i: UUID(), ...dragItem };
-    event.emit('drop.flowLayout', draggingItem);
 
     const newLayoutItem = JSON.parse(JSON.stringify(layoutItem));
     const itemIndex = newLayoutItem.children?.findIndex((i: string) => i === draggingItem.i);
@@ -127,6 +126,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
         // 如果当前容器没有组件，直接插入children即可
         newLayoutItem.children = [draggingItem.i];
       }
+      event.emit('drop.flowLayout', draggingItem, itemType);
     } else {
       // 正在拖拽的组件，就在当前容器中
       // 如果dragover的下标和当前正在拖拽dragItem下标相同，则表示不需要更换位置，直接return
