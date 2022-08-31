@@ -179,7 +179,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     event.on('drop.flowLayout', this.onFlowLayoutDrop);
     this.onLayoutMaybeChanged(this.state.layouts, this.props.layouts, false);
     this.event.emit('mounted');
-    this.observeContainer(this.state.layouts);
+    this.observeFlowLayout(this.state.layouts);
   }
 
   componentDidUpdate(prevProps: LayoutProps, prevState: LayoutStates) {
@@ -190,7 +190,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     }
 
     if (!isIdEqual(prevProps.layouts, this.props.layouts)) {
-      this.observeContainer(layouts);
+      this.observeFlowLayout(layouts);
     }
 
     this.onLayoutMaybeChanged(layouts, prevState.layouts, false);
@@ -209,6 +209,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       const height = el.clientHeight;
       const positionParams = this.getPositionParams();
       const h = calcH(positionParams, height, item.y);
+
       const newLayouts = this.state.layouts.map((layoutItem: LayoutItem) => {
         if (layoutItem.i === item.i) {
           layoutItem.h = h;
@@ -223,9 +224,10 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     };
   }
 
-  observeContainer(layouts: LayoutItem[]) {
+  observeFlowLayout(layouts: LayoutItem[]) {
     layouts.forEach((item: LayoutItem) => {
-      const el = document.querySelector(`[data-id="${item.i}"]`) as HTMLElement;
+      const el = document.querySelector(`[data-i="${item.i}"]`) as HTMLElement;
+
       if (!el || !item.autoHeight) return;
       // 监听容器内部组件变化，重新计算高度和h值
       observeDom(el, this.handleObserve(el, item));

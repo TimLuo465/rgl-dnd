@@ -121,10 +121,16 @@ export const Default: React.FC = () => {
       const el = document.querySelector(`div[data-id=${item}]`);
       drag?.(el);
     }, []);
+
     return (
       <div data-id={item} style={{ border: '1px solid #ddd', height: '80px' }}>
-        {item.substring(1, 5)}
-        {/* {renderFlowLayout(item.children)} */}
+        <div>
+          3232323
+          <div>
+            12121
+            <div>{item.substring(1, 5)}</div>
+          </div>
+        </div>
       </div>
     );
   };
@@ -218,7 +224,7 @@ export const Default: React.FC = () => {
     (item) => {
       if (item.isContainer) {
         return (
-          <div data-grid={item} key={item.i} data-id={item.i}>
+          <div data-grid={item} key={item.i} data-i={item.i}>
             <FlowLayout
               layoutItem={item}
               empty={<EmptyContainer />}
