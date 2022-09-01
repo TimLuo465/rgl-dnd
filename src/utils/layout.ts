@@ -504,9 +504,14 @@ export function pickLayoutItem({ i, x, y, h, w }: LayoutItem) {
   return { i, x, y, h, w };
 }
 
+export function pickFlowLayoutId(layouts: LayoutItem[]) {
+  return layouts.filter((l) => l.autoHeight).map((l) => l.i);
+}
+
 export function isIdEqual(layouts1: LayoutItem[], layouts2: LayoutItem[]) {
-  const s1 = layouts1?.map((item) => item.i);
-  const s2 = layouts2?.map((item) => item.i);
+  const s1 = pickFlowLayoutId(layouts1);
+  const s2 = pickFlowLayoutId(layouts2);
+
   return lodashEqual(s1, s2);
 }
 
