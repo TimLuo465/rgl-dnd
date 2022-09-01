@@ -226,11 +226,15 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
   observeFlowLayout(layouts: LayoutItem[]) {
     layouts.forEach((item: LayoutItem) => {
-      const el = document.querySelector(`[data-i="${item.i}"]`) as HTMLElement;
+      const el: any = document.querySelector(`[data-i="${item.i}"]`);
 
       if (!el || !item.autoHeight) return;
+      if (el.observer) {
+        // 每次重新监听前，之前的监听关闭
+        el.observer.disconnect();
+      }
       // 监听容器内部组件变化，重新计算高度和h值
-      observeDom(el, this.handleObserve(el, item));
+      el.observer = observeDom(el, this.handleObserve(el, item));
     });
   }
 
