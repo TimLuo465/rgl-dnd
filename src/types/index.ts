@@ -21,7 +21,6 @@ export interface LayoutItem extends DragItem {
   maxH?: number;
   autoHeight?: boolean;
   placeholder?: boolean;
-  isContainer?: boolean;
   children?: string[];
 }
 

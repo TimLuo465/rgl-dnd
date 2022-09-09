@@ -145,7 +145,7 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
         onResizeStart={this.onResizeStart}
         onResize={this.onResize}
         onResizeStop={this.onResizeStop}
-        resizeHandles={data.isContainer ? flowLayoutHandles : resizeHandles}
+        resizeHandles={data.autoHeight ? flowLayoutHandles : resizeHandles}
         minConstraints={[minWidth, 10]}
         maxConstraints={[maxWidth, Infinity]}
         className={`${prefixCls}-item${isDragging && placeholder ? '-placeholder' : ''} ${
