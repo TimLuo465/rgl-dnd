@@ -136,9 +136,7 @@ export type InternalEventType = 'mounted';
 export interface FlowLayoutProps extends React.Attributes {
   layoutItem: LayoutItem;
   canDrop?: boolean;
-  rowHeight?: number;
-  maxRows?: number;
-  margin?: [number, number];
+  classNameStr?: string;
   empty: React.ReactNode;
   onDrop?: (layoutItem: LayoutItem | null, item: LayoutItem, itemType: string) => void;
   onHover?: (item: LayoutItem, itemType: string) => void;

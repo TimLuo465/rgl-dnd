@@ -1,12 +1,6 @@
 import React, { memo, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { XYCoord } from 'react-dnd';
-import {
-  DEFAULT_FLOW_LAYOUT,
-  DEFAULT_ITEMTYPE,
-  DEFAULT_MARGIN,
-  DEFAULT_MAXROWS,
-  prefixCls,
-} from '../../constants';
+import { DEFAULT_FLOW_LAYOUT, DEFAULT_ITEMTYPE, prefixCls } from '../../constants';
 import { DragItem, FlowLayoutProps, indicatorInfo, LayoutItem } from '../../types';
 import {
   checkArray,
@@ -47,9 +41,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
   const {
     layoutItem,
     canDrop = true,
-    rowHeight = 1,
-    maxRows = DEFAULT_MAXROWS,
-    margin = DEFAULT_MARGIN,
+    classNameStr = '',
     empty,
     onDrop,
     onHover,
@@ -211,7 +203,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
 
   return (
     <Droppable canDrop={true} accept={groups} onDrop={handleDrop} onHover={handleHover}>
-      <div ref={containerRef} className={`${prefixCls}-flow-layout`}>
+      <div ref={containerRef} className={`${prefixCls}-flow-layout ${classNameStr}`.trim()}>
         {renderItems()}
       </div>
     </Droppable>
