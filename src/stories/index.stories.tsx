@@ -25,7 +25,7 @@ const mockFlowLayouts = [
     i: '1111111111111111',
     nodeId: '111',
     type: 'flow-container',
-    isContainer: true,
+    isCanvas: true,
     parentId: 'ROOT',
   },
 ];
@@ -71,7 +71,7 @@ export const Default: React.FC = () => {
     w: 12,
     h: 8.545454545454545,
     // h: 23.454545454545453,
-    isContainer: true,
+    isCanvas: true,
     autoHeight: true,
     children: [],
   };
@@ -160,11 +160,12 @@ export const Default: React.FC = () => {
     return (
       <div
         style={{
-          height: '90px',
-          lineHeight: '90px',
-          textAlign: 'center',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '90px',
           color: '#a7b1bd',
-          border: '1px dashed red',
+          height: '100%',
         }}
       >
         请拖入组件
@@ -187,7 +188,7 @@ export const Default: React.FC = () => {
   // const renderFlowLayout1 = (data) => {
   //   if (!checkArray(data)) return;
   //   return data.map((item, index) => {
-  //     if (item.isContainer) {
+  //     if (item.isCanvas) {
   //       return (
   //         <div data-flow={item}>
   //           <FlowLayout
@@ -222,9 +223,14 @@ export const Default: React.FC = () => {
 
   const renderItem1 = useCallback(
     (item) => {
-      if (item.isContainer) {
+      if (item.isCanvas) {
         return (
-          <div data-grid={item} key={item.i} data-i={item.i}>
+          <div
+            data-grid={item}
+            key={item.i}
+            data-i={item.i}
+            style={{ display: 'flex', gap: '16px' }}
+          >
             <FlowLayout
               layoutItem={item}
               empty={<EmptyContainer />}
@@ -252,7 +258,7 @@ export const Default: React.FC = () => {
     const cloneData = JSON.parse(JSON.stringify(layouts));
     for (let index = 0; index < cloneData.length; index++) {
       const item = cloneData[index];
-      if (item.isContainer) {
+      if (item.isCanvas) {
         item.children = item.children.filter((i) => i !== layoutItem.i);
       }
       // if (item.i === layoutItem.parentId) {

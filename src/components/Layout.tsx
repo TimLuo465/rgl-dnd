@@ -229,12 +229,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       const el: any = document.querySelector(`[data-i="${item.i}"]`);
 
       if (!el || !item.autoHeight) return;
-      if (el.observer) {
-        // 每次重新监听前，之前的监听关闭
-        el.observer.disconnect();
-      }
       // 监听容器内部组件变化，重新计算高度和h值
-      el.observer = observeDom(el, this.handleObserve(el, item));
+      observeDom(el, this.handleObserve(el, item));
     });
   }
 

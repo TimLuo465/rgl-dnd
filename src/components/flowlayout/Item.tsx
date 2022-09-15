@@ -1,22 +1,21 @@
-import React, { memo, ReactElement, useRef } from 'react';
+import React from 'react';
 import { FlowLayoutItemProps } from '../../types';
 import Draggable from '../Draggable';
 
-const FlowLayoutItem: React.FC<FlowLayoutItemProps> = memo((props) => {
-  const { children, onDragStart, onDragEnd, data, type } = props;
-  const ref: any = useRef();
-
-  const child = React.Children.only(children) as ReactElement;
-  const content = React.cloneElement(child, {
-    ...child.props,
-    drag: ref.current?.drag,
-  });
+const FlowLayoutItem: React.FC<FlowLayoutItemProps> = (props) => {
+  const { children, onDragStart, onDragEnd, data, type, draggable = true } = props;
 
   return (
-    <Draggable onDragStart={onDragStart} onDragEnd={onDragEnd} data={data} type={type} ref={ref}>
-      {content}
+    <Draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      draggable={draggable}
+      data={data}
+      type={type}
+    >
+      {children}
     </Draggable>
   );
-});
+};
 
 export default FlowLayoutItem;

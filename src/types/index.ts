@@ -21,7 +21,6 @@ export interface LayoutItem extends DragItem {
   maxH?: number;
   autoHeight?: boolean;
   placeholder?: boolean;
-  isContainer?: boolean;
   children?: string[];
 }
 
@@ -137,9 +136,9 @@ export type InternalEventType = 'mounted';
 export interface FlowLayoutProps extends React.Attributes {
   layoutItem: LayoutItem;
   canDrop?: boolean;
-  rowHeight?: number;
-  maxRows?: number;
-  margin?: [number, number];
+  classNameStr?: string;
+  droppable?: boolean;
+  draggable?: boolean;
   empty: React.ReactNode;
   onDrop?: (layoutItem: LayoutItem | null, item: LayoutItem, itemType: string) => void;
   onHover?: (item: LayoutItem, itemType: string) => void;
@@ -152,6 +151,7 @@ export interface FlowLayoutItemProps {
   data: LayoutItem;
   type?: string;
   children?: ReactNode;
+  draggable?: boolean;
   onDragStart?: (draggedItem: DragItem) => void;
   onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;
 }
