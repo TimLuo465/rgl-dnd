@@ -42,6 +42,8 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
     layoutItem,
     canDrop = true,
     classNameStr = '',
+    droppable = true,
+    draggable = true,
     empty,
     onDrop,
     onHover,
@@ -188,6 +190,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
           key={item.i}
           data={item}
           type={DEFAULT_FLOW_LAYOUT}
+          draggable={draggable}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
@@ -202,7 +205,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
   const { groups } = useLayoutContext();
 
   return (
-    <Droppable canDrop={true} accept={groups} onDrop={handleDrop} onHover={handleHover}>
+    <Droppable canDrop={droppable} accept={groups} onDrop={handleDrop} onHover={handleHover}>
       <div ref={containerRef} className={`${prefixCls}-flow-layout ${classNameStr}`.trim()}>
         {renderItems()}
       </div>
