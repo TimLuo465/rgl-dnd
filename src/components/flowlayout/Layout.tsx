@@ -43,7 +43,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
     canDrop = true,
     classNameStr = '',
     droppable = true,
-    draggable = true,
+    itemDraggable = true,
     empty,
     onDrop,
     onHover,
@@ -109,6 +109,8 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
 
     const newLayoutItem = JSON.parse(JSON.stringify(layoutItem));
     const itemIndex = newLayoutItem.children?.findIndex((i: string) => i === draggingItem.i);
+    event.emit('drop.flowLayout', draggingItem, itemType);
+
     // 新拖入的组件，或者是从其他其他容器内拖入的情况
     if (itemType === DEFAULT_ITEMTYPE || (itemIndex && itemIndex === -1)) {
       if (checkArray(newLayoutItem.children)) {
@@ -119,7 +121,6 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
         // 如果当前容器没有组件，直接插入children即可
         newLayoutItem.children = [draggingItem.i];
       }
-      event.emit('drop.flowLayout', draggingItem, itemType);
     } else {
       // 正在拖拽的组件，就在当前容器中
       // 如果dragover的下标和当前正在拖拽dragItem下标相同，则表示不需要更换位置，直接return
@@ -190,7 +191,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
           key={item.i}
           data={item}
           type={DEFAULT_FLOW_LAYOUT}
-          draggable={draggable}
+          draggable={itemDraggable}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
