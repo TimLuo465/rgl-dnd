@@ -232,7 +232,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
       if (!el || !item.autoHeight) return;
       // 监听容器内部组件变化，重新计算高度和h值
-      observeDom(el.parentNode, this.handleObserve(el, item));
+      observeDom(el, this.handleObserve(el, item));
     });
   }
 
