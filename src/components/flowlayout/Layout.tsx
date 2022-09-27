@@ -39,6 +39,7 @@ let indicator: indicatorInfo = {
 
 const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
   const {
+    id = '',
     layoutItem,
     canDrop = true,
     classNameStr = '',
@@ -207,7 +208,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
 
   return (
     <Droppable canDrop={droppable} accept={groups} onDrop={handleDrop} onHover={handleHover}>
-      <div ref={containerRef} className={`${prefixCls}-flow-layout ${classNameStr}`.trim()}>
+      <div id={id} ref={containerRef} className={`${prefixCls}-flow-layout ${classNameStr}`.trim()}>
         {renderItems()}
       </div>
     </Droppable>
