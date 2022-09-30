@@ -5,6 +5,7 @@ import { DragItem, FlowLayoutProps, indicatorInfo, LayoutItem } from '../../type
 import {
   checkArray,
   findPosition,
+  getComputedStyle,
   getDOMInfo,
   movePlaceholder,
   renderIndicator,
@@ -45,6 +46,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
     classNameStr = '',
     droppable = true,
     itemDraggable = true,
+    allowOutBoundedDrop = true,
     empty,
     onDrop,
     onHover,
@@ -167,14 +169,29 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
     onDragEnd?.(draggedItem, didDrop, itemType);
   }, []);
 
+  const handleCardDragEnd = useCallback((item: DragItem, didDrop: boolean, itemType: string) => {
+    if (!didDrop) {
+      if (allowOutBoundedDrop) {
+        const Indicator = document.querySelector(`.${prefixCls}-indicator`) as HTMLElement;
+        const displayStyle = getComputedStyle(Indicator).display;
+        if (displayStyle && displayStyle !== 'none') {
+          handleDrop(item, itemType);
+        }
+      } else {
+        event.emit('drop.flowLayout', null, itemType);
+      }
+    }
+    resetIndicator();
+  }, []);
+
   useEffect(() => {
     // 渲染指示线
     renderIndicator();
-    event.on('dragEnd.cardItem', resetIndicator);
+    event.on('dragEnd.cardItem', handleCardDragEnd);
     event.on('hover.layout', resetIndicator);
 
     return () => {
-      event.off('dragEnd.cardItem', resetIndicator);
+      event.off('dragEnd.cardItem', handleCardDragEnd);
       event.off('hover.layout', resetIndicator);
     };
   }, []);
