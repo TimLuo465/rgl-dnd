@@ -5,7 +5,6 @@ import { DragItem, FlowLayoutProps, indicatorInfo, LayoutItem } from '../../type
 import {
   checkArray,
   findPosition,
-  getComputedStyle,
   getDOMInfo,
   movePlaceholder,
   renderIndicator,
@@ -38,6 +37,8 @@ let indicator: indicatorInfo = {
   where: 'before',
 };
 
+const faultToleranceValue = 10;
+
 const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
   const {
     id = '',
@@ -55,7 +56,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
     children,
   } = props;
 
-  const containerRef = React.createRef<HTMLDivElement>();
+  const containerRef = useRef<HTMLDivElement>();
 
   // 设置指示线位置
   const setIndicatorPosition = useEvent(({ height, left, top, width }) => {
@@ -169,20 +170,33 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
     onDragEnd?.(draggedItem, didDrop, itemType);
   }, []);
 
-  const handleCardDragEnd = useCallback((item: DragItem, didDrop: boolean, itemType: string) => {
+  const handleCardDragEnd = useEvent((item: DragItem, didDrop: boolean, itemType: string) => {
     if (!didDrop) {
       if (allowOutBoundedDrop) {
-        const Indicator = document.querySelector(`.${prefixCls}-indicator`) as HTMLElement;
-        const displayStyle = getComputedStyle(Indicator).display;
-        if (displayStyle && displayStyle !== 'none') {
+        const indicator = document.querySelector(`.${prefixCls}-indicator`) as HTMLElement;
+        const { left, right, top, bottom } = indicator.getBoundingClientRect() as DOMRect;
+        const {
+          left: cLeft,
+          right: cRight,
+          top: cTop,
+          bottom: cBottom,
+        } = containerRef.current.getBoundingClientRect() as DOMRect;
+        if (
+          left >= cLeft - faultToleranceValue &&
+          right <= cRight + faultToleranceValue &&
+          top >= cTop - faultToleranceValue &&
+          bottom <= cBottom + faultToleranceValue
+        ) {
           handleDrop(item, itemType);
+          resetIndicator();
         }
       } else {
         event.emit('drop.flowLayout', null, itemType);
       }
+    } else {
+      resetIndicator();
     }
-    resetIndicator();
-  }, []);
+  });
 
   useEffect(() => {
     // 渲染指示线
