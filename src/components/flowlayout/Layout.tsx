@@ -37,13 +37,17 @@ let indicator: indicatorInfo = {
   where: 'before',
 };
 
+const faultToleranceValue = 10;
+
 const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
   const {
+    id = '',
     layoutItem,
     canDrop = true,
     classNameStr = '',
     droppable = true,
-    draggable = true,
+    itemDraggable = true,
+    allowOutBoundedDrop = true,
     empty,
     onDrop,
     onHover,
@@ -52,7 +56,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
     children,
   } = props;
 
-  const containerRef = React.createRef<HTMLDivElement>();
+  const containerRef = useRef<HTMLDivElement>();
 
   // 设置指示线位置
   const setIndicatorPosition = useEvent(({ height, left, top, width }) => {
@@ -109,6 +113,8 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
 
     const newLayoutItem = JSON.parse(JSON.stringify(layoutItem));
     const itemIndex = newLayoutItem.children?.findIndex((i: string) => i === draggingItem.i);
+    event.emit('drop.flowLayout', draggingItem, itemType);
+
     // 新拖入的组件，或者是从其他其他容器内拖入的情况
     if (itemType === DEFAULT_ITEMTYPE || (itemIndex && itemIndex === -1)) {
       if (checkArray(newLayoutItem.children)) {
@@ -119,7 +125,6 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
         // 如果当前容器没有组件，直接插入children即可
         newLayoutItem.children = [draggingItem.i];
       }
-      event.emit('drop.flowLayout', draggingItem, itemType);
     } else {
       // 正在拖拽的组件，就在当前容器中
       // 如果dragover的下标和当前正在拖拽dragItem下标相同，则表示不需要更换位置，直接return
@@ -165,14 +170,42 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
     onDragEnd?.(draggedItem, didDrop, itemType);
   }, []);
 
+  const handleCardDragEnd = useEvent((item: DragItem, didDrop: boolean, itemType: string) => {
+    if (!didDrop) {
+      if (allowOutBoundedDrop) {
+        const indicator = document.querySelector(`.${prefixCls}-indicator`) as HTMLElement;
+        const { left, right, top, bottom } = indicator.getBoundingClientRect() as DOMRect;
+        const {
+          left: cLeft,
+          right: cRight,
+          top: cTop,
+          bottom: cBottom,
+        } = containerRef.current.getBoundingClientRect() as DOMRect;
+        if (
+          left >= cLeft - faultToleranceValue &&
+          right <= cRight + faultToleranceValue &&
+          top >= cTop - faultToleranceValue &&
+          bottom <= cBottom + faultToleranceValue
+        ) {
+          handleDrop(item, itemType);
+          resetIndicator();
+        }
+      } else {
+        event.emit('drop.flowLayout', null, itemType);
+      }
+    } else {
+      resetIndicator();
+    }
+  });
+
   useEffect(() => {
     // 渲染指示线
     renderIndicator();
-    event.on('dragEnd.cardItem', resetIndicator);
+    event.on('dragEnd.cardItem', handleCardDragEnd);
     event.on('hover.layout', resetIndicator);
 
     return () => {
-      event.off('dragEnd.cardItem', resetIndicator);
+      event.off('dragEnd.cardItem', handleCardDragEnd);
       event.off('hover.layout', resetIndicator);
     };
   }, []);
@@ -190,7 +223,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
           key={item.i}
           data={item}
           type={DEFAULT_FLOW_LAYOUT}
-          draggable={draggable}
+          draggable={itemDraggable}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
@@ -206,7 +239,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
 
   return (
     <Droppable canDrop={droppable} accept={groups} onDrop={handleDrop} onHover={handleHover}>
-      <div ref={containerRef} className={`${prefixCls}-flow-layout ${classNameStr}`.trim()}>
+      <div id={id} ref={containerRef} className={`${prefixCls}-flow-layout ${classNameStr}`.trim()}>
         {renderItems()}
       </div>
     </Droppable>

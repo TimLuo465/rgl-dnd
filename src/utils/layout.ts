@@ -557,7 +557,11 @@ export function setPlaceholderDisplay(state: string) {
 
 export function observeDom(el: HTMLElement, callback) {
   const observer = new MutationObserver(callback);
-  observer.observe(el, { subtree: true, childList: true });
+  observer.observe(el, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+  });
   return observer;
 }
 
