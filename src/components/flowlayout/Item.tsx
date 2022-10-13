@@ -9,7 +9,7 @@ const FlowLayoutItem: React.FC<FlowLayoutItemProps> = (props) => {
     <Draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      draggable={draggable}
+      draggable={draggable && data.draggable !== false}
       data={data}
       type={type}
     >
