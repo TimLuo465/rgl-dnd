@@ -2,7 +2,7 @@ import React from 'react';
 import { FlowLayoutItemProps } from '../../types';
 import Draggable from '../Draggable';
 
-const FlowLayoutItem: React.FC<FlowLayoutItemProps> = (props) => {
+const FlowLayoutItem: React.FC<FlowLayoutItemProps> = React.memo((props) => {
   const { children, onDragStart, onDragEnd, data, type, draggable = true } = props;
 
   return (
@@ -16,6 +16,6 @@ const FlowLayoutItem: React.FC<FlowLayoutItemProps> = (props) => {
       {children}
     </Draggable>
   );
-};
+});
 
 export default FlowLayoutItem;
