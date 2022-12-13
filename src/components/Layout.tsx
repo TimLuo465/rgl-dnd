@@ -206,23 +206,27 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
   handleObserve(el: HTMLElement, item: LayoutItem) {
     return () => {
-      const height = el.clientHeight;
-      const positionParams = this.getPositionParams();
-      const h = calcH(positionParams, height, item.y);
-      const oldLayout = this.state.layouts.find((l) => l.i === item.i);
-      if (!oldLayout?.h || oldLayout.h !== h) {
-        const newLayouts = this.state.layouts.map((layoutItem: LayoutItem) => {
-          if (layoutItem.i === item.i) {
-            layoutItem.h = h;
+      let timeId: any = null;
+      if (timeId) clearTimeout(timeId);
+      setTimeout(() => {
+        const height = el.clientHeight;
+        const positionParams = this.getPositionParams();
+        const h = calcH(positionParams, height, item.y);
+        const oldLayout = this.state.layouts.find((l) => l.i === item.i);
+        if (!oldLayout?.h || oldLayout.h !== h) {
+          const newLayouts = this.state.layouts.map((layoutItem: LayoutItem) => {
+            if (layoutItem.i === item.i) {
+              layoutItem.h = h;
+              return layoutItem;
+            }
             return layoutItem;
-          }
-          return layoutItem;
-        });
-        this.setState({
-          layouts: newLayouts,
-        });
-        this.onLayoutMaybeChanged(newLayouts);
-      }
+          });
+          this.setState({
+            layouts: newLayouts,
+          });
+          this.onLayoutMaybeChanged(newLayouts);
+        }
+      }, 100);
     };
   }
 
