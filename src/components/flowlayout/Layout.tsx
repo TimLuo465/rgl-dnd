@@ -48,6 +48,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
     droppable = true,
     itemDraggable = true,
     allowOutBoundedDrop = true,
+    isEmpty = false,
     empty,
     onDrop,
     onHover,
@@ -117,13 +118,14 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
 
     // 新拖入的组件，或者是从其他其他容器内拖入的情况
     if (itemType === DEFAULT_ITEMTYPE || (itemIndex && itemIndex === -1)) {
-      if (checkArray(newLayoutItem.children)) {
+      if (checkArray(newLayoutItem.children) && !isEmpty) {
         // 如果当前容器内有组件，那么将新拖入的组件插入对应的位置
         const insertIndex = indicator.where === 'before' ? indicator.index : indicator.index + 1;
         newLayoutItem.children.splice(insertIndex, 0, draggingItem.i);
       } else {
         // 如果当前容器没有组件，直接插入children即可
-        newLayoutItem.children = [draggingItem.i];
+        const tempChildren = newLayoutItem.children || [];
+        newLayoutItem.children = [...tempChildren, draggingItem.i];
       }
     } else {
       // 正在拖拽的组件，就在当前容器中
@@ -149,7 +151,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
       // 如果当前正在拖动的组件，就是当前容器，那么不触发hover事件
       if (item.i === layoutItem.i) return;
 
-      if (checkArray(layoutItem.children)) {
+      if (checkArray(layoutItem.children) && !isEmpty) {
         const targetNodes: any[] = Array.from(containerRef.current.children);
         calcIndicator(targetNodes, clientOffset);
       } else {
@@ -211,7 +213,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
   }, []);
 
   const renderItems = () => {
-    if (!checkArray(layoutItem?.children)) {
+    if (!checkArray(layoutItem?.children) || isEmpty) {
       return empty;
     }
 
