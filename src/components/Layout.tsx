@@ -224,7 +224,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
           this.setState({
             layouts: newLayouts,
           });
-          this.onLayoutMaybeChanged(newLayouts);
+          this.onLayoutMaybeChanged(newLayouts, this.state.layouts, false);
         }
       }, 100);
     };
