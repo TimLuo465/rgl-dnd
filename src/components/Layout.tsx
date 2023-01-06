@@ -208,7 +208,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     return () => {
       let timeId: any = null;
       if (timeId) clearTimeout(timeId);
-      setTimeout(() => {
+      timeId = setTimeout(() => {
         const height = el.clientHeight;
         const positionParams = this.getPositionParams();
         const h = calcH(positionParams, height, item.y);
@@ -224,9 +224,9 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
           this.setState({
             layouts: newLayouts,
           });
-          this.onLayoutMaybeChanged(newLayouts);
+          this.onLayoutMaybeChanged(newLayouts, this.state.layouts, false);
         }
-      }, 100);
+      }, 50);
     };
   }
 
