@@ -1,4 +1,5 @@
 import EventEmitter from 'eventemitter3';
+import debounce from 'lodash.debounce';
 import React, { CSSProperties } from 'react';
 import { XYCoord } from 'react-dnd';
 import {
@@ -205,29 +206,25 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   }
 
   handleObserve(el: HTMLElement, item: LayoutItem) {
-    return () => {
-      let timeId: any = null;
-      if (timeId) clearTimeout(timeId);
-      timeId = setTimeout(() => {
-        const height = el.clientHeight;
-        const positionParams = this.getPositionParams();
-        const h = calcH(positionParams, height, item.y);
-        const oldLayout = this.state.layouts.find((l) => l.i === item.i);
-        if (!oldLayout?.h || oldLayout.h !== h) {
-          const newLayouts = this.state.layouts.map((layoutItem: LayoutItem) => {
-            if (layoutItem.i === item.i) {
-              layoutItem.h = h;
-              return layoutItem;
-            }
+    return debounce(() => {
+      const height = el.clientHeight;
+      const positionParams = this.getPositionParams();
+      const h = calcH(positionParams, height, item.y);
+      const oldLayout = this.state.layouts.find((l) => l.i === item.i);
+      if (!oldLayout?.h || oldLayout.h !== h) {
+        const newLayouts = this.state.layouts.map((layoutItem: LayoutItem) => {
+          if (layoutItem.i === item.i) {
+            layoutItem.h = h;
             return layoutItem;
-          });
-          this.setState({
-            layouts: newLayouts,
-          });
-          this.onLayoutMaybeChanged(newLayouts, this.state.layouts, false);
-        }
-      }, 50);
-    };
+          }
+          return layoutItem;
+        });
+        this.setState({
+          layouts: newLayouts,
+        });
+        this.onLayoutMaybeChanged(newLayouts, this.state.layouts, false, true);
+      }
+    }, 50);
   }
 
   observeFlowLayout(layouts: LayoutItem[]) {
@@ -269,7 +266,12 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   };
 
   // isUserAction - if true, it maybe drop, resize or swap, if false, it maybe correctBounds
-  onLayoutMaybeChanged(newLayouts: LayoutItem[], _oldLayouts?: LayoutItem[], isUserAction = true) {
+  onLayoutMaybeChanged(
+    newLayouts: LayoutItem[],
+    _oldLayouts?: LayoutItem[],
+    isUserAction = true,
+    isLayoutChange = false
+  ) {
     if (!_oldLayouts) {
       _oldLayouts = cloneLayouts(this.state.layouts);
     }
@@ -277,7 +279,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     const equal = isEqual(_oldLayouts, newLayouts);
 
     if (!equal) {
-      this.props.onLayoutChange?.(cloneLayouts(newLayouts), isUserAction);
+      this.props.onLayoutChange?.(cloneLayouts(newLayouts), isUserAction, isLayoutChange);
     }
 
     return equal;
