@@ -169,9 +169,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
   }, []);
 
   const handleDragEnd = useCallback((draggedItem: DragItem, didDrop: boolean, itemType: string) => {
-    const isMoveOut = !indicator.el && indicator.index > -1;
-
-    console.log('indicator', indicator);
+    const isMoveOut = !indicator.el;
 
     onDragEnd?.(draggedItem, didDrop, itemType, isMoveOut);
   }, []);
