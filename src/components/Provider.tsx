@@ -8,10 +8,7 @@ export default class Provider extends React.PureComponent {
     const { children } = this.props;
 
     return (
-      <DndProvider
-        backend={HTML5Backend}
-        options={{ rootElement: document.querySelector('#grid-designer-wrapper') }}
-      >
+      <DndProvider backend={HTML5Backend}>
         <LayoutProvider>{children}</LayoutProvider>
       </DndProvider>
     );

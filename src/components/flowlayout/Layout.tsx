@@ -1,18 +1,18 @@
 import React, { memo, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { XYCoord } from 'react-dnd';
 import { DEFAULT_FLOW_LAYOUT, DEFAULT_ITEMTYPE, prefixCls } from '../../constants';
-import { DragItem, FlowLayoutProps, indicatorInfo, LayoutItem } from '../../types';
+import { DragItem, FlowLayoutProps, LayoutItem, indicatorInfo } from '../../types';
 import {
+  UUID,
   checkArray,
   findPosition,
   getDOMInfo,
   movePlaceholder,
   renderIndicator,
-  UUID,
 } from '../../utils';
 import Droppable from '../Droppable';
-import event from '../event';
 import { useLayoutContext } from '../LayoutContext';
+import event from '../event';
 import Item from './Item';
 
 function useEvent(handler) {
@@ -169,7 +169,9 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
   }, []);
 
   const handleDragEnd = useCallback((draggedItem: DragItem, didDrop: boolean, itemType: string) => {
-    onDragEnd?.(draggedItem, didDrop, itemType);
+    const isMoveOut = !indicator.el;
+
+    onDragEnd?.(draggedItem, didDrop, itemType, isMoveOut);
   }, []);
 
   const handleCardDragEnd = useEvent((item: DragItem, didDrop: boolean, itemType: string) => {

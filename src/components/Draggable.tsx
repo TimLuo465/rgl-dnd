@@ -23,8 +23,8 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
       end(draggedItem: DragItem, monitor) {
         const didDrop = monitor.didDrop();
         const itemType = monitor.getItemType() as string;
-        event.emit('dragEnd.cardItem', draggedItem, didDrop, itemType);
         onDragEnd?.(draggedItem, didDrop, itemType);
+        event.emit('dragEnd.cardItem', draggedItem, didDrop, itemType);
       },
       collect: (monitor) => ({
         isDragging: monitor.isDragging(),
@@ -56,7 +56,7 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
       const child = React.Children.only(children) as ReactElement;
       const content = React.cloneElement(child, {
         ...child.props,
-        drag: drag,
+        drag,
       });
       return content;
     }
