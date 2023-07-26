@@ -94,12 +94,19 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
     this.handleResize(e, callbackData, 'onResizeStop');
   };
 
+  getResizeHandles = () => {
+    const { resizeHandles, data } = this.props;
+
+    if (data.resizeHandles) return data.resizeHandles;
+
+    return data.autoHeight ? flowLayoutHandles : resizeHandles;
+  };
+
   render() {
     const {
       type,
       style,
       data,
-      resizeHandles,
       children,
       onDragStart,
       onDragEnd,
@@ -136,6 +143,8 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
       0
     );
 
+    const resizeHandles = this.getResizeHandles()
+
     return (
       <ResizableBox
         {...restProps}
@@ -145,12 +154,11 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
         onResizeStart={this.onResizeStart}
         onResize={this.onResize}
         onResizeStop={this.onResizeStop}
-        resizeHandles={data.autoHeight ? flowLayoutHandles : resizeHandles}
+        resizeHandles={resizeHandles}
         minConstraints={[minWidth, 10]}
         maxConstraints={[maxWidth, Infinity]}
-        className={`${prefixCls}-item${isDragging && placeholder ? '-placeholder' : ''} ${
-          data.autoHeight ? `${prefixCls}-autoheight` : ''
-        } ${className}`.trim()}
+        className={`${prefixCls}-item${isDragging && placeholder ? '-placeholder' : ''} ${data.autoHeight ? `${prefixCls}-autoheight` : ''
+          } ${className}`.trim()}
       >
         <Draggable
           type={type}
