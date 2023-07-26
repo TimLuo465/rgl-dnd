@@ -146,7 +146,6 @@ export const styleInFlow = (el: HTMLElement, parent: HTMLElement) => {
   const style: any = getComputedStyle(el);
   const parentStyle: any = getComputedStyle(parent);
 
-  if (style.overflow && style.overflow !== 'visible') return;
   if (parentStyle.float !== 'none') return;
   if (parent && parentStyle.display === 'grid') {
     return;
