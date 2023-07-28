@@ -1,4 +1,5 @@
 import lodashEqual from 'lodash.isequal';
+import ResizeObserver from 'resize-observer-polyfill';
 import { prefixCls } from '../constants';
 import { CompactType, DragItem, LayoutItem, PositionParams } from '../types';
 import { calcCP } from './calculate';
@@ -556,12 +557,8 @@ export function setPlaceholderDisplay(state: string) {
 }
 
 export function observeDom(el: HTMLElement, callback) {
-  const observer = new MutationObserver(callback);
-  observer.observe(el, {
-    subtree: true,
-    childList: true,
-    attributes: true,
-  });
+  const observer = new ResizeObserver(callback);
+  observer.observe(el);
   return observer;
 }
 
