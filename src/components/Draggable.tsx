@@ -1,4 +1,4 @@
-import React, { isValidElement, memo, ReactElement, useEffect } from 'react';
+import React, { isValidElement, memo, ReactElement } from 'react';
 import { useDrag } from 'react-dnd';
 import { DEFAULT_ITEMTYPE } from '../constants';
 import { DraggableProps, DragItem } from '../types';
@@ -18,8 +18,11 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
   const [collected, drag] = useDrag(
     () => ({
       type,
-      item: data,
       canDrag: draggable,
+      item() {
+        onDragStart?.(data);
+        return data
+      },
       end(draggedItem: DragItem, monitor) {
         const didDrop = monitor.didDrop();
         const itemType = monitor.getItemType() as string;
@@ -34,14 +37,6 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
     }),
     [type, data, draggable, onDragEnd]
   );
-
-  const { isDragging } = collected;
-
-  useEffect(() => {
-    if (isDragging) {
-      onDragStart?.(collected.item);
-    }
-  }, [isDragging]);
 
   if (typeof children === 'string') {
     return (
