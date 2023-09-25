@@ -40,6 +40,7 @@ export interface DroppableProps {
   canDrop?: boolean;
   onDrop?: (item: unknown, itemType: string) => void;
   onHover?: (item: unknown, offset: XYCoord, itemType: string, clientOffset?: XYCoord) => void;
+  onDragLeave?: () => void;
   children?: ReactNode;
 }
 

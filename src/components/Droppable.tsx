@@ -1,10 +1,10 @@
-import { isValidElement } from 'react';
+import { isValidElement, useEffect } from 'react';
 import { useDrop } from 'react-dnd';
 import { DroppableProps } from '../types';
 
 const Droppable: React.FC<DroppableProps> = (props) => {
-  const { accept, children, canDrop, onDrop, onHover } = props;
-  const [, connect] = useDrop(
+  const { accept, children, canDrop, onDrop, onHover, onDragLeave } = props;
+  const [{ canDrop: _canDrop, isOver }, connect] = useDrop(
     () => ({
       accept: canDrop ? accept : [],
       drop(_item: unknown, monitor) {
@@ -23,9 +23,21 @@ const Droppable: React.FC<DroppableProps> = (props) => {
           onHover?.(item, offset, itemType, clientOffset);
         }
       },
+      collect: (monitor) => {
+        return {
+          isOver: monitor.isOver({ shallow: true }),
+          canDrop: monitor.canDrop(),
+        }
+      }
     }),
     [accept, canDrop, onDrop, onHover]
   );
+
+  useEffect(() => {
+    if (_canDrop && !isOver) {
+      onDragLeave?.()
+    }
+  }, [onDragLeave, _canDrop, isOver])
 
   if (isValidElement(children)) {
     return connect(children);
