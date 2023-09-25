@@ -12,7 +12,7 @@ import {
   DEFAULT_MARGIN,
   DEFAULT_MAXROWS,
   DEFAULT_ROWHEIGHT,
-  prefixCls,
+  prefixCls
 } from '../constants';
 import { DragItem, InternalEventType, LayoutItem, LayoutProps } from '../types';
 import {
@@ -37,7 +37,7 @@ import {
   setComDisplay,
   setPlaceholderDisplay,
   setTransform,
-  withLayoutItem,
+  withLayoutItem
 } from '../utils';
 import Droppable from './Droppable';
 import event from './event';
@@ -548,6 +548,10 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     }
   };
 
+  onDragLeave = () => {
+    this.props.onDragLeave?.()
+  }
+
   resetDraggingState(i: string) {
     const { layouts } = this.state;
     const layoutItem = getLayoutItem(layouts, i);
@@ -796,6 +800,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
         canDrop={droppable}
         onDrop={this.onDrop}
         onHover={this.hover}
+        onDragLeave={this.onDragLeave}
       >
         <div ref={this.containerRef} className={clsNameStr} style={containerStyle}>
           {this.renderPlaceholder(placeholder)}
