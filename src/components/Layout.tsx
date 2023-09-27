@@ -73,7 +73,7 @@ let groupIndex = 0;
  */
 let hoveredGroups = [];
 
-class Layout extends React.Component<LayoutProps, LayoutStates> {
+class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   isHoverFlowLayout = false;
 
   group = '';
@@ -138,7 +138,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       layouts: reLayout(layouts, compactType, cols),
       offset: null,
       accept: groupKeys,
-      containerWidth: 0,
+      containerWidth: this.getWidth(),
       draggingItem: null,
       prevPosition: null,
       placeholder: null,
@@ -181,6 +181,9 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     this.onLayoutMaybeChanged(this.state.layouts, this.props.layouts, false);
     this.event.emit('mounted');
     this.observeFlowLayout(this.state.layouts);
+    // this.setState({
+    //   containerWidth: this.getWidth()
+    // })
   }
 
   componentDidUpdate(prevProps: LayoutProps, prevState: LayoutStates) {
@@ -194,7 +197,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       this.observeFlowLayout(layouts);
     }
 
-    this.onLayoutMaybeChanged(layouts, prevState.layouts, false);
+    this.updateLayout(layouts, prevState.layouts);
   }
 
   componentWillUnmount() {
@@ -204,6 +207,10 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     event.off('hover.flowLayout', this.onFlowLayoutHover);
     event.off('drop.flowLayout', this.onFlowLayoutDrop);
   }
+
+  updateLayout = debounce((layouts: LayoutItem[], preLayouts: LayoutItem[]) => {
+    this.onLayoutMaybeChanged(layouts, preLayouts, false);
+  }, 50);
 
   handleObserve(el: HTMLElement, item: LayoutItem) {
     return debounce(() => {
@@ -340,8 +347,12 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   };
 
   hover = (item: DragItem, offset: XYCoord, itemType: string) => {
-    this.isHoverFlowLayout = false;
-    setPlaceholderDisplay('block');
+    if (this.isHoverFlowLayout) {
+      setPlaceholderDisplay('block');
+      event.emit('hover.layout');
+      this.isHoverFlowLayout = false;
+    }
+
     const { layouts } = this.state;
     let layoutItem: LayoutItem | null = null;
 
@@ -368,9 +379,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     if (layoutItem) {
       this.props.onDragOver?.(layoutItem);
     }
-
-    event.emit('hover.layout');
-  };
+  }
 
   calcXY(item: LayoutItem, offset: XYCoord) {
     const positionParams = this.getPositionParams();
@@ -549,8 +558,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   };
 
   onDragLeave = () => {
-    this.props.onDragLeave?.()
-  }
+    this.props.onDragLeave?.();
+  };
 
   resetDraggingState(i: string) {
     const { layouts } = this.state;
@@ -700,13 +709,14 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
 
   getPositionParams = () => {
     const { cols, margin, maxRows, rowHeight, containerPadding } = this.props;
+    const { containerWidth } = this.state
 
     return {
       cols,
       margin,
       maxRows,
       rowHeight,
-      containerWidth: this.getWidth(),
+      containerWidth: containerWidth,
       containerPadding,
     };
   };

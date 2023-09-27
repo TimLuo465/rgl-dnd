@@ -517,8 +517,8 @@ export function isIdEqual(layouts1: LayoutItem[], layouts2: LayoutItem[]) {
 }
 
 export function isEqual(layouts1: LayoutItem[], layouts2: LayoutItem[]) {
-  // const s1 = layouts1?.map(pickLayoutItem);
-  // const s2 = layouts2?.map(pickLayoutItem);
+  const s1 = layouts1?.map(pickLayoutItem);
+  const s2 = layouts2?.map(pickLayoutItem);
 
   return lodashEqual(layouts1, layouts2);
 }
