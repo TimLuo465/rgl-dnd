@@ -73,7 +73,7 @@ let groupIndex = 0;
  */
 let hoveredGroups = [];
 
-class Layout extends React.Component<LayoutProps, LayoutStates> {
+class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   isHoverFlowLayout = false;
 
   group = '';
@@ -138,7 +138,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
       layouts: reLayout(layouts, compactType, cols),
       offset: null,
       accept: groupKeys,
-      containerWidth: 0,
+      containerWidth: this.getWidth(),
       draggingItem: null,
       prevPosition: null,
       placeholder: null,
@@ -340,8 +340,12 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   };
 
   hover = (item: DragItem, offset: XYCoord, itemType: string) => {
-    this.isHoverFlowLayout = false;
-    setPlaceholderDisplay('block');
+    if (this.isHoverFlowLayout) {
+      setPlaceholderDisplay('block');
+      event.emit('hover.layout');
+      this.isHoverFlowLayout = false;
+    }
+
     const { layouts } = this.state;
     let layoutItem: LayoutItem | null = null;
 
@@ -368,9 +372,7 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     if (layoutItem) {
       this.props.onDragOver?.(layoutItem);
     }
-
-    event.emit('hover.layout');
-  };
+  }
 
   calcXY(item: LayoutItem, offset: XYCoord) {
     const positionParams = this.getPositionParams();
@@ -549,8 +551,8 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
   };
 
   onDragLeave = () => {
-    this.props.onDragLeave?.()
-  }
+    this.props.onDragLeave?.();
+  };
 
   resetDraggingState(i: string) {
     const { layouts } = this.state;
@@ -695,18 +697,19 @@ class Layout extends React.Component<LayoutProps, LayoutStates> {
     }
 
     this.onLayoutMaybeChanged(newLayouts, this.oldLayouts);
-    onResizeStop?.(newLayouts);
+    onResizeStop?.(item, newLayouts);
   };
 
   getPositionParams = () => {
     const { cols, margin, maxRows, rowHeight, containerPadding } = this.props;
+    const { containerWidth } = this.state
 
     return {
       cols,
       margin,
       maxRows,
       rowHeight,
-      containerWidth: this.getWidth(),
+      containerWidth: containerWidth,
       containerPadding,
     };
   };
