@@ -70,7 +70,7 @@ export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
   onLayoutChange?: (layouts: LayoutItem[], isUserAction: boolean, isLayoutChange?: boolean) => void;
   onDragStart?: (layoutItem: LayoutItem) => void;
   onDragOver?: (layoutItem: LayoutItem) => void;
-  onResizeStop?: (layouts: LayoutItem[]) => void;
+  onResizeStop?: (layoutItem: LayoutItem, layouts: LayoutItem[]) => void;
   onDrop?: (
     layouts: LayoutItem[],
     droppedItem: LayoutItem,
@@ -116,9 +116,9 @@ export type ItemProps = Omit<
     placeholder?: boolean;
     leftSpacing?: number;
     resizeHandles?: ResizeHandle[];
-    onResizeStart?: (data: LayoutItem, w: number, h: number) => void;
+    onResizeStart?: (data: LayoutItem) => void;
     onResize?: (data: LayoutItem, w: number, h: number, direction: string) => void;
-    onResizeStop?: (data: LayoutItem, w: number, h: number) => void;
+    onResizeStop?: (data: LayoutItem) => void;
   };
 
 export type Size = {

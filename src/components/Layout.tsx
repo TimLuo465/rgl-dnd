@@ -197,7 +197,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       this.observeFlowLayout(layouts);
     }
 
-    this.updateLayout(layouts, prevState.layouts);
+    this.onLayoutMaybeChanged(layouts, prevState.layouts, false);
   }
 
   componentWillUnmount() {
@@ -207,10 +207,6 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     event.off('hover.flowLayout', this.onFlowLayoutHover);
     event.off('drop.flowLayout', this.onFlowLayoutDrop);
   }
-
-  updateLayout = debounce((layouts: LayoutItem[], preLayouts: LayoutItem[]) => {
-    this.onLayoutMaybeChanged(layouts, preLayouts, false);
-  }, 50);
 
   handleObserve(el: HTMLElement, item: LayoutItem) {
     return debounce(() => {
@@ -704,7 +700,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     }
 
     this.onLayoutMaybeChanged(newLayouts, this.oldLayouts);
-    onResizeStop?.(newLayouts);
+    onResizeStop?.(item, newLayouts);
   };
 
   getPositionParams = () => {
