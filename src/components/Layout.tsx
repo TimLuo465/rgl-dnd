@@ -181,9 +181,6 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     this.onLayoutMaybeChanged(this.state.layouts, this.props.layouts, false);
     this.event.emit('mounted');
     this.observeFlowLayout(this.state.layouts);
-    // this.setState({
-    //   containerWidth: this.getWidth()
-    // })
   }
 
   componentDidUpdate(prevProps: LayoutProps, prevState: LayoutStates) {
