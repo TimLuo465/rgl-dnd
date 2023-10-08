@@ -554,6 +554,10 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     this.props.onDragLeave?.();
   };
 
+  onDragEnter = () => {
+    this.props.onDragEnter?.();
+  }
+
   resetDraggingState(i: string) {
     const { layouts } = this.state;
     const layoutItem = getLayoutItem(layouts, i);
@@ -804,6 +808,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
         onDrop={this.onDrop}
         onHover={this.hover}
         onDragLeave={this.onDragLeave}
+        onDragEnter={this.onDragEnter}
       >
         <div ref={this.containerRef} className={clsNameStr} style={containerStyle}>
           {this.renderPlaceholder(placeholder)}
