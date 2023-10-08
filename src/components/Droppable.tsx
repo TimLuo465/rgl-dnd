@@ -3,7 +3,7 @@ import { useDrop } from 'react-dnd';
 import { DroppableProps } from '../types';
 
 const Droppable: React.FC<DroppableProps> = (props) => {
-  const { accept, children, canDrop, onDrop, onHover, onDragLeave } = props;
+  const { accept, children, canDrop, onDrop, onHover, onDragLeave, onDragEnter } = props;
   const [{ canDrop: _canDrop, isOver }, connect] = useDrop(
     () => ({
       accept: canDrop ? accept : [],
@@ -38,6 +38,12 @@ const Droppable: React.FC<DroppableProps> = (props) => {
       onDragLeave?.()
     }
   }, [onDragLeave, _canDrop, isOver])
+
+  useEffect(() => {
+    if (_canDrop && isOver) {
+      onDragEnter?.()
+    }
+  }, [onDragEnter, _canDrop, isOver])
 
   if (isValidElement(children)) {
     return connect(children);
