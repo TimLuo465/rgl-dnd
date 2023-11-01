@@ -44,20 +44,24 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
     this.setState({ resizing });
   }
 
-  handleResize = (
-    e: SyntheticEvent,
-    callbackData: ResizeCallbackData,
-    evtType: ResizeEventType
-  ) => {
+  onResizeStart = (e: SyntheticEvent, callbackData: ResizeCallbackData) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const { data } = this.props;
+    const { size, handle } = callbackData;
+    this.setState({ direction: handle });
+    this.setResizing(size);
+    this.props.onResizeStart?.(data)
+  };
+
+  onResize = throttle((e: SyntheticEvent, callbackData: ResizeCallbackData) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     const { data, leftSpacing } = this.props;
     const { size, handle } = callbackData;
     const { direction } = this.state;
 
-    if (evtType === 'onResizeStart') {
-      this.setState({ direction: handle });
-    } else if (evtType === 'onResizeStop') {
-      this.setState({ direction: '' });
-    }
     const positionParams = getPositionParams(this.props);
     const { w, h } = calcWH(positionParams, size.width, size.height, data.x, data.y, leftSpacing);
     const item = {
@@ -67,9 +71,6 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
     };
     const wh = getWH(item, positionParams, leftSpacing);
 
-    e.preventDefault();
-    e.stopPropagation();
-
     // 上下拖拽时，确保w不变
     if (direction === 'n' || direction === 's') {
       wh.w = data.w;
@@ -78,20 +79,17 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
       wh.h = data.h;
     }
 
-    this.setResizing(evtType === 'onResizeStop' ? null : size);
-    this.props[evtType]?.(data, wh.w, wh.h, handle);
-  };
-
-  onResizeStart = (e: SyntheticEvent, callbackData: ResizeCallbackData) => {
-    this.handleResize(e, callbackData, 'onResizeStart');
-  };
-
-  onResize = throttle((e: SyntheticEvent, callbackData: ResizeCallbackData) => {
-    this.handleResize(e, callbackData, 'onResize');
+    this.setResizing(size)
+    this.props.onResize?.(data, wh.w, wh.h, handle);
   }, 1 / 60);
 
-  onResizeStop = (e: SyntheticEvent, callbackData: ResizeCallbackData) => {
-    this.handleResize(e, callbackData, 'onResizeStop');
+  onResizeStop = (e: SyntheticEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const { data } = this.props;
+    this.setState({ direction: '' });
+    this.setResizing(null);
+    this.props.onResizeStop?.(data)
   };
 
   getResizeHandles = () => {
@@ -157,8 +155,12 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
         resizeHandles={resizeHandles}
         minConstraints={[minWidth, 10]}
         maxConstraints={[maxWidth, Infinity]}
+        draggableOpts={{
+          enableUserSelectHack: false
+        }}
         className={`${prefixCls}-item${isDragging && placeholder ? '-placeholder' : ''} ${data.autoHeight ? `${prefixCls}-autoheight` : ''
-          } ${className}`.trim()}
+          } ${className}`.trim()
+        }
       >
         <Draggable
           type={type}
@@ -169,7 +171,7 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
         >
           {children}
         </Draggable>
-      </ResizableBox>
+      </ResizableBox >
     );
   }
 }

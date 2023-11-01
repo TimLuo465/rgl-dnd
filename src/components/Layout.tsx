@@ -181,9 +181,6 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     this.onLayoutMaybeChanged(this.state.layouts, this.props.layouts, false);
     this.event.emit('mounted');
     this.observeFlowLayout(this.state.layouts);
-    // this.setState({
-    //   containerWidth: this.getWidth()
-    // })
   }
 
   componentDidUpdate(prevProps: LayoutProps, prevState: LayoutStates) {
@@ -197,7 +194,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       this.observeFlowLayout(layouts);
     }
 
-    this.updateLayout(layouts, prevState.layouts);
+    this.onLayoutMaybeChanged(layouts, prevState.layouts, false);
   }
 
   componentWillUnmount() {
@@ -207,10 +204,6 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     event.off('hover.flowLayout', this.onFlowLayoutHover);
     event.off('drop.flowLayout', this.onFlowLayoutDrop);
   }
-
-  updateLayout = debounce((layouts: LayoutItem[], preLayouts: LayoutItem[]) => {
-    this.onLayoutMaybeChanged(layouts, preLayouts, false);
-  }, 50);
 
   handleObserve(el: HTMLElement, item: LayoutItem) {
     return debounce(() => {
@@ -561,6 +554,10 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     this.props.onDragLeave?.();
   };
 
+  onDragEnter = () => {
+    this.props.onDragEnter?.();
+  }
+
   resetDraggingState(i: string) {
     const { layouts } = this.state;
     const layoutItem = getLayoutItem(layouts, i);
@@ -704,7 +701,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     }
 
     this.onLayoutMaybeChanged(newLayouts, this.oldLayouts);
-    onResizeStop?.(newLayouts);
+    onResizeStop?.(item, newLayouts);
   };
 
   getPositionParams = () => {
@@ -811,6 +808,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
         onDrop={this.onDrop}
         onHover={this.hover}
         onDragLeave={this.onDragLeave}
+        onDragEnter={this.onDragEnter}
       >
         <div ref={this.containerRef} className={clsNameStr} style={containerStyle}>
           {this.renderPlaceholder(placeholder)}
