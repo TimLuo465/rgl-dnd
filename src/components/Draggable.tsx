@@ -1,4 +1,4 @@
-import React, { isValidElement, memo, ReactElement } from 'react';
+import React, { isValidElement, memo, ReactElement, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
 import { DEFAULT_ITEMTYPE } from '../constants';
 import { DraggableProps, DragItem } from '../types';
@@ -15,7 +15,7 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
     onDragStart,
   } = props;
 
-  const [collected, drag] = useDrag(
+  const [collected, drag, dragPreview] = useDrag(
     () => ({
       type,
       canDrag: draggable,
@@ -37,6 +37,14 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
     }),
     [type, data, draggable, onDragEnd]
   );
+
+  useEffect(() => {
+    const { selector = '.custom-drag-layer' } = data
+    const el = document.querySelector(selector)
+    if (el) {
+      dragPreview(el, { offsetX: 0, offsetY: 0 })
+    }
+  }, [data])
 
   if (typeof children === 'string') {
     return (
