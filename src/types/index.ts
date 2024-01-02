@@ -35,6 +35,7 @@ export interface DroppingItem {
 }
 
 export interface DroppableProps {
+  weId?: string;
   group?: string;
   accept?: string[];
   canDrop?: boolean;

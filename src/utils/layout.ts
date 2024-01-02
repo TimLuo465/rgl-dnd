@@ -34,7 +34,7 @@ export function getContainerHeight(
   const cp = calcCP(containerPadding, 'y');
   const [, mY] = margin;
 
-  return nbRow * rowHeight + (nbRow - 1) * mY + cp + 'px';
+  return `${nbRow * rowHeight + (nbRow - 1) * mY + cp}px`;
 }
 
 export function getLayoutItem(layouts: LayoutItem[], i: string): LayoutItem | null {
@@ -65,7 +65,8 @@ export function sortLayoutItemsByRowCol(layout: LayoutItem[]): LayoutItem[] {
   return layout.slice(0).sort(function sort(a, b) {
     if (a.y > b.y || (a.y === b.y && a.x > b.x)) {
       return 1;
-    } else if (a.y === b.y && a.x === b.x) {
+    }
+    if (a.y === b.y && a.x === b.x) {
       // Without this, we can get different sort results in IE vs. Chrome/FF
       return 0;
     }
@@ -533,14 +534,14 @@ export function getScrollbar(node: HTMLElement): HTMLElement | null {
   while (target.tagName !== 'BODY') {
     const { overflowY } = window.getComputedStyle(target);
 
-    if (overflowY === 'scroll' || overflowY === 'auto') {
+    if ((overflowY === 'scroll' || overflowY === 'auto') && target.scrollTop) {
       return target;
     }
 
     target = target.parentElement;
   }
 
-  return null;
+  return target;
 }
 
 export function setComDisplay(i: string, state: string) {
