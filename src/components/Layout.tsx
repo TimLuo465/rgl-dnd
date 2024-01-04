@@ -12,7 +12,7 @@ import {
   DEFAULT_MARGIN,
   DEFAULT_MAXROWS,
   DEFAULT_ROWHEIGHT,
-  prefixCls
+  prefixCls,
 } from '../constants';
 import { DragItem, InternalEventType, LayoutItem, LayoutProps } from '../types';
 import {
@@ -37,13 +37,14 @@ import {
   setComDisplay,
   setPlaceholderDisplay,
   setTransform,
-  withLayoutItem
+  withLayoutItem,
 } from '../utils';
 import Droppable from './Droppable';
-import event from './event';
 import Item from './Item';
 import { layoutContext, layoutStore } from './LayoutContext';
+import event from './event';
 import './styles/layout.less';
+
 interface LayoutStates {
   offset: DOMRect | null;
   accept: string[];
@@ -372,7 +373,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     if (layoutItem) {
       this.props.onDragOver?.(layoutItem);
     }
-  }
+  };
 
   calcXY(item: LayoutItem, offset: XYCoord) {
     const positionParams = this.getPositionParams();
@@ -541,6 +542,14 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       return;
     }
 
+    const { layouts } = this.state;
+    const index = layouts.findIndex((l) => l.i === item.i);
+    const layoutItem = layouts[index];
+
+    if (!isEqual([layoutItem], [item])) {
+      this.onDrop(item, itemType);
+    }
+
     if (this.isGroupItem(itemType)) {
       this.setState({
         layouts: cloneLayouts(this.oldLayouts),
@@ -556,7 +565,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
 
   onDragEnter = () => {
     this.props.onDragEnter?.();
-  }
+  };
 
   resetDraggingState(i: string) {
     const { layouts } = this.state;
@@ -706,14 +715,14 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
 
   getPositionParams = () => {
     const { cols, margin, maxRows, rowHeight, containerPadding } = this.props;
-    const { containerWidth } = this.state
+    const { containerWidth } = this.state;
 
     return {
       cols,
       margin,
       maxRows,
       rowHeight,
-      containerWidth: containerWidth,
+      containerWidth,
       containerPadding,
     };
   };

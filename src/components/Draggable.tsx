@@ -21,13 +21,15 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
       canDrag: draggable,
       item() {
         onDragStart?.(data);
-        return data
+        return data;
       },
       end(draggedItem: DragItem, monitor) {
         const didDrop = monitor.didDrop();
         const itemType = monitor.getItemType() as string;
-        onDragEnd?.(draggedItem, didDrop, itemType);
-        event.emit('dragEnd.cardItem', draggedItem, didDrop, itemType);
+        const item = monitor.getItem();
+
+        onDragEnd?.(item, didDrop, itemType);
+        event.emit('dragEnd.cardItem', item, didDrop, itemType);
       },
       collect: (monitor) => ({
         isDragging: monitor.isDragging(),
@@ -39,12 +41,12 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
   );
 
   useEffect(() => {
-    const { selector = '.custom-drag-layer' } = data
-    const el = document.querySelector(selector)
+    const { selector = '.custom-drag-layer' } = data;
+    const el = document.querySelector(selector);
     if (el) {
-      dragPreview(el, { offsetX: 0, offsetY: 0 })
+      dragPreview(el, { offsetX: 0, offsetY: 0 });
     }
-  }, [data])
+  }, [data]);
 
   if (typeof children === 'string') {
     return (
