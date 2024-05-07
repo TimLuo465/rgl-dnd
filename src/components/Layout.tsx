@@ -232,9 +232,18 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     layouts.forEach((item: LayoutItem) => {
       const el: any = document.querySelector(`[data-i="${item.i}"]`);
 
-      if (!el || !item.autoHeight) return;
+      if (!el) {
+        return;
+      }
+
+      if (!item.autoHeight) {
+        // 针对不需要监听的场景主动断开
+        el._observeInstance?.disconnect?.();
+        return;
+      }
+
       // 监听容器内部组件变化，重新计算高度和h值
-      observeDom(el, this.handleObserve(el, item));
+      el._observeInstance = observeDom(el, this.handleObserve(el, item));
     });
   }
 
