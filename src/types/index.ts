@@ -39,6 +39,7 @@ export interface DroppableProps {
   group?: string;
   accept?: string[];
   canDrop?: boolean;
+  scrollbarContainer?: HTMLElement | (() => HTMLElement);
   onDrop?: (item: unknown, itemType: string) => void;
   onHover?: (item: unknown, offset: XYCoord, itemType: string, clientOffset?: XYCoord) => void;
   onDragLeave?: () => void;
@@ -69,6 +70,7 @@ export interface LayoutProps extends Omit<DroppableProps, 'onDrop' | 'ref'> {
   /** 组件拖动的时候超出设计器区域之外时总是被禁止,不会触发onDrop事件，默认true */
   allowOutBoundedDrop?: boolean;
   isResetLayout?: boolean;
+  scrollbarContainer?: HTMLElement | (() => HTMLElement);
   onLayoutChange?: (layouts: LayoutItem[], isUserAction: boolean, isLayoutChange?: boolean) => void;
   onDragStart?: (layoutItem: LayoutItem) => void;
   onDragOver?: (layoutItem: LayoutItem) => void;

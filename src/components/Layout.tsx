@@ -805,7 +805,15 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
 
   render() {
     const { layouts, accept, placeholder } = this.state;
-    const { style, margin, rowHeight, containerPadding, droppable, className } = this.props;
+    const {
+      style,
+      margin,
+      rowHeight,
+      containerPadding,
+      droppable,
+      className,
+      scrollbarContainer,
+    } = this.props;
 
     const clsNameStr = `${prefixCls} ${className}`.trim();
     const containerStyle: CSSProperties = {
@@ -822,6 +830,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
         weId={this.group}
         group={this.group}
         accept={accept}
+        scrollbarContainer={scrollbarContainer}
         canDrop={droppable}
         onDrop={this.onDrop}
         onHover={this.hover}

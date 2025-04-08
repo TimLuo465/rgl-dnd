@@ -1,9 +1,19 @@
-import { isValidElement, useEffect } from 'react';
+import React, { isValidElement, useEffect } from 'react';
 import { useDrop } from 'react-dnd';
 import { DroppableProps } from '../types';
+import { useDndScrolling } from './scroller';
 
 const Droppable: React.FC<DroppableProps> = (props) => {
-  const { accept, children, canDrop, onDrop, onHover, onDragLeave, onDragEnter } = props;
+  const {
+    accept,
+    children,
+    canDrop,
+    scrollbarContainer,
+    onDrop,
+    onHover,
+    onDragLeave,
+    onDragEnter,
+  } = props;
   const [{ canDrop: _canDrop, isOver }, connect] = useDrop(
     () => ({
       accept: canDrop ? accept : [],
@@ -27,23 +37,25 @@ const Droppable: React.FC<DroppableProps> = (props) => {
         return {
           isOver: monitor.isOver({ shallow: true }),
           canDrop: monitor.canDrop(),
-        }
-      }
+        };
+      },
     }),
     [accept, canDrop, onDrop, onHover]
   );
 
+  useDndScrolling(scrollbarContainer);
+
   useEffect(() => {
     if (_canDrop && !isOver) {
-      onDragLeave?.()
+      onDragLeave?.();
     }
-  }, [onDragLeave, _canDrop, isOver])
+  }, [onDragLeave, _canDrop, isOver]);
 
   useEffect(() => {
     if (_canDrop && isOver) {
-      onDragEnter?.()
+      onDragEnter?.();
     }
-  }, [onDragEnter, _canDrop, isOver])
+  }, [onDragEnter, _canDrop, isOver]);
 
   if (isValidElement(children)) {
     return connect(children);
