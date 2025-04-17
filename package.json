@@ -1,6 +1,6 @@
 {
   "name": "rgl-dnd",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "React-grid-layout by react-dnd",
   "author": "TimLuo465",
   "license": "MIT",
@@ -79,8 +79,8 @@
     "lodash.isequal": "^4.5.0",
     "lodash.throttle": "^4.1.1",
     "raf": "^3.4.1",
-    "react-dnd": "^14.0.2",
-    "react-dnd-html5-backend": "^14.0.0",
+    "react-dnd": "^16.0.0",
+    "react-dnd-html5-backend": "^16.0.1",
     "react-resizable": "^2.0.0",
     "resize-observer-polyfill": "^1.5.1"
   }

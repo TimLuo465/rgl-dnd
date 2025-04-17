@@ -3,7 +3,6 @@ import { clamp } from './calculate';
 
 type TransformStyle = {
   transform: string;
-  WebkitTransform: string;
   width: number;
   height: number | 'auto';
 };
@@ -13,7 +12,6 @@ export function setTransform({ top, left, width, height }: Position): TransformS
   const translate = `translate(${left}px,${top}px)`;
   return {
     transform: translate,
-    WebkitTransform: translate,
     width,
     height,
   };

@@ -16,7 +16,6 @@ import {
 } from '../constants';
 import { DragItem, InternalEventType, LayoutItem, LayoutProps } from '../types';
 import {
-  calcGridItemPosition,
   calcH,
   calcLayoutByProps,
   calcLeftSpacing,
@@ -27,35 +26,24 @@ import {
   getContainerHeight,
   getLayoutItem,
   getScrollbar,
-  getWH,
   isEqual,
-  isIdEqual,
   moveElement,
   observeDom,
   pickLayoutItem,
   reLayout,
   setComDisplay,
-  setPlaceholderDisplay,
-  setTransform,
   withLayoutItem,
 } from '../utils';
 import Droppable from './Droppable';
+import Engine from './Engine';
 import Item from './Item';
 import { layoutContext, layoutStore } from './LayoutContext';
+import Placeholder, { PlaceholderRef } from './Placeholder';
 import event from './event';
 import './styles/layout.less';
 
 interface LayoutStates {
-  offset: DOMRect | null;
   accept: string[];
-  layouts: LayoutItem[];
-  containerWidth: number;
-  /** for resizing */
-  placeholder: LayoutItem | null;
-  /** for dragging */
-  draggingItem: LayoutItem | null;
-  /** dragging position */
-  prevPosition: XYCoord | null;
 }
 
 type GroupLayouts = {
@@ -90,6 +78,22 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
 
   // 调整成组件属性，onDragStart 时不再触发组件更新
   oldLayouts: LayoutItem[] | null;
+
+  engine: Engine = new Engine();
+
+  placeholderRef: React.RefObject<PlaceholderRef> = React.createRef();
+
+  layouts: LayoutItem[];
+
+  /** for dragging */
+  draggingItem: LayoutItem | null = null;
+
+  /** dragging position */
+  prevPosition: XYCoord | null = null;
+
+  offset: DOMRect | null = null;
+
+  containerWidth: number = this.getWidth();
 
   static defaultProps: LayoutProps;
 
@@ -136,35 +140,21 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     this.oldLayouts = reLayout(layouts, compactType, cols);
 
     this.state = {
-      layouts: reLayout(layouts, compactType, cols),
-      offset: null,
       accept: groupKeys,
-      containerWidth: this.getWidth(),
-      draggingItem: null,
-      prevPosition: null,
-      placeholder: null,
     };
 
+    this.layouts = cloneLayouts(this.oldLayouts);
     layoutStore.setGroups(groupKeys);
   }
 
-  static getDerivedStateFromProps(props, prevState: LayoutStates) {
-    // skip to update layouts when dragging or resizing
-    if (hoveredGroups.length || prevState.placeholder) {
-      return null;
-    }
-
-    const { layouts, cols, compactType } = props;
-    const { layouts: _layouts } = prevState;
-    if (!isEqual(layouts, _layouts)) {
-      return {
-        layouts: reLayout(layouts, compactType, cols),
-      };
-    }
-    return null;
-  }
-
   componentDidMount() {
+    this.scrollbar = this.getScrollbarContainer();
+
+    this.engine.init(this.containerRef.current!, {
+      getPositionParams: this.getPositionParams,
+      scrollContainer: this.scrollbar,
+    });
+
     if (this.props.nested) {
       // hack code for nested layout
       setTimeout(() => {
@@ -179,23 +169,20 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     event.on('dragEnd.cardItem', this.onCardItemDragEnd);
     event.on('hover.flowLayout', this.onFlowLayoutHover);
     event.on('drop.flowLayout', this.onFlowLayoutDrop);
-    this.onLayoutMaybeChanged(this.state.layouts, this.props.layouts, false);
+    this.onLayoutMaybeChanged(this.layouts, this.props.layouts, false);
     this.event.emit('mounted');
-    this.observeFlowLayout(this.state.layouts);
   }
 
-  componentDidUpdate(prevProps: LayoutProps, prevState: LayoutStates) {
-    const { layouts } = this.state;
-
-    if (hoveredGroups.length || prevState.placeholder) {
+  componentDidUpdate(prevProps: LayoutProps) {
+    if (hoveredGroups.length) {
       return;
     }
 
-    if (!isIdEqual(prevProps.layouts, this.props.layouts)) {
-      this.observeFlowLayout(layouts);
-    }
+    const { layouts, compactType, cols } = this.props;
+    const newLayouts = reLayout(layouts, compactType, cols);
 
-    this.onLayoutMaybeChanged(layouts, prevState.layouts, false);
+    this.handleLayoutsChange(newLayouts);
+    this.onLayoutMaybeChanged(newLayouts, prevProps.layouts, false);
   }
 
   componentWillUnmount() {
@@ -206,64 +193,53 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     event.off('drop.flowLayout', this.onFlowLayoutDrop);
   }
 
+  getScrollbarContainer = () => {
+    const { scrollbarContainer } = this.props;
+    const scrollbar =
+      typeof scrollbarContainer === 'function' ? scrollbarContainer() : scrollbarContainer;
+
+    return scrollbar || getScrollbar(this.containerRef.current);
+  };
+
   handleObserve(el: HTMLElement, item: LayoutItem) {
     return debounce(() => {
+      // 避免autoHeight动态变化的情况
+      if (!item.autoHeight) {
+        return;
+      }
+
       const height = el.clientHeight;
       const positionParams = this.getPositionParams();
       const h = calcH(positionParams, height, item.y);
-      const oldLayout = this.state.layouts.find((l) => l.i === item.i);
+      const oldLayout = this.layouts.find((l) => l.i === item.i);
+
       if (!oldLayout?.h || oldLayout.h !== h) {
-        const newLayouts = this.state.layouts.map((layoutItem: LayoutItem) => {
-          if (layoutItem.i === item.i) {
-            layoutItem.h = h;
-            return layoutItem;
-          }
-          return layoutItem;
-        });
-        this.setState({
-          layouts: newLayouts,
-        });
-        this.onLayoutMaybeChanged(newLayouts, this.state.layouts, false, true);
+        if (oldLayout) {
+          oldLayout.h = h;
+        }
+        this.handleLayoutsChange(this.layouts);
+        this.onLayoutMaybeChanged(this.layouts, [], false, true);
       }
     }, 50);
-  }
-
-  observeFlowLayout(layouts: LayoutItem[]) {
-    layouts.forEach((item: LayoutItem) => {
-      const el: any = document.querySelector(`[data-i="${item.i}"]`);
-
-      if (!el) {
-        return;
-      }
-
-      if (!item.autoHeight) {
-        // 针对不需要监听的场景主动断开
-        el._observeInstance?.disconnect?.();
-        return;
-      }
-
-      // 监听容器内部组件变化，重新计算高度和h值
-      el._observeInstance = observeDom(el, this.handleObserve(el, item));
-    });
   }
 
   onFlowLayoutHover = (itemType: string) => {
     if (this.isHoverFlowLayout) return;
     this.isHoverFlowLayout = true;
-    const { draggingItem } = this.state;
-    if (draggingItem) {
+
+    if (this.draggingItem) {
       // 移入流式容器时候，隐藏占位符
-      setPlaceholderDisplay('none');
+      this.placeholderRef.current.updatePlaceholder(null);
       if (![DEFAULT_FLOW_LAYOUT, DEFAULT_ITEMTYPE].includes(itemType)) {
         // 如果是网格布局中的组件拖入到流式布局，那么原有网格布局中的组件在hover的时候需要隐藏
-        setComDisplay(draggingItem.i, 'none');
+        setComDisplay(this.draggingItem.i, 'none');
       }
     }
   };
 
   onFlowLayoutDrop = (layoutItem: LayoutItem | null, itemType: string) => {
     // 流式容器drop的时候，清空状态
-    const { draggingItem } = this.state;
+    const { draggingItem } = this;
     if (layoutItem) {
       this.resetDraggingState(layoutItem.i);
     } else if (draggingItem) {
@@ -283,7 +259,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     isLayoutChange = false
   ) {
     if (!_oldLayouts) {
-      _oldLayouts = cloneLayouts(this.state.layouts);
+      _oldLayouts = cloneLayouts(this.layouts);
     }
 
     const equal = isEqual(_oldLayouts, newLayouts);
@@ -296,14 +272,43 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   }
 
   resize = () => {
-    const { containerWidth } = this.state;
+    const { containerWidth } = this;
     const containerDOM = this.containerRef.current;
 
     if (containerDOM && containerDOM.offsetWidth !== containerWidth) {
-      this.setState({
-        offset: containerDOM.getBoundingClientRect(),
-        containerWidth: containerDOM.offsetWidth,
-      });
+      this.offset = containerDOM.getBoundingClientRect();
+      this.containerWidth = containerDOM.offsetWidth;
+      this.engine.updateLayouts(this.layouts);
+    }
+  };
+
+  handleLayoutsChange = (
+    layouts: LayoutItem[],
+    dragInfo?: {
+      draggingItem: LayoutItem | null;
+      prevPosition: XYCoord | null;
+      placeholder: LayoutItem | null;
+      isDragging?: boolean;
+    }
+  ) => {
+    this.layouts = layouts;
+    this.engine.updateLayouts(layouts);
+
+    if (dragInfo) {
+      const { draggingItem, prevPosition, placeholder } = dragInfo;
+
+      this.draggingItem = draggingItem;
+      this.prevPosition = prevPosition;
+
+      if (placeholder !== null) {
+        this.placeholderRef.current?.updatePlaceholder(
+          placeholder,
+          layouts,
+          this.getPositionParams()
+        );
+      } else {
+        this.placeholderRef.current?.updatePlaceholder(null);
+      }
     }
   };
 
@@ -322,7 +327,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
 
     if (!layout) return;
 
-    const { layouts } = layout.state;
+    const { layouts } = layout;
     const { compactType, cols } = layout.props;
 
     const index = layouts.findIndex((l) => l.i === layoutItem.i);
@@ -330,11 +335,11 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     if (index === -1) return;
 
     layouts.splice(index, 1);
-    layout.setState({
-      layouts: compact(layouts, compactType, cols),
+
+    layout.handleLayoutsChange(compact(layouts, compactType, cols), {
       draggingItem: null,
-      placeholder: null,
       prevPosition: null,
+      placeholder: null,
     });
   };
 
@@ -351,17 +356,12 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
 
   hover = (item: DragItem, offset: XYCoord, itemType: string) => {
     if (this.isHoverFlowLayout) {
-      setPlaceholderDisplay('block');
       event.emit('hover.layout');
       this.isHoverFlowLayout = false;
     }
 
-    const { layouts } = this.state;
+    const { layouts } = this;
     let layoutItem: LayoutItem | null = null;
-
-    if (!this.scrollbar) {
-      this.scrollbar = getScrollbar(this.containerRef.current);
-    }
 
     if (!this.oldLayouts) {
       this.oldLayouts = cloneLayouts(layouts);
@@ -386,7 +386,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
 
   calcXY(item: LayoutItem, offset: XYCoord) {
     const positionParams = this.getPositionParams();
-    const { offset: parentOffset } = this.state;
+    const { offset: parentOffset } = this;
     const { scrollTop, scrollLeft } = this.scrollbar;
     const x = offset.x - parentOffset.x + scrollLeft;
     const y = offset.y - parentOffset.y + scrollTop;
@@ -400,9 +400,9 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       return;
     }
 
-    const { layouts, prevPosition } = this.state;
+    const { layouts, prevPosition } = this;
     const position = this.calcXY(layoutItem, offset);
-    layoutItem.placeholder = true;
+
     if (position.x === prevPosition?.x && position.y === prevPosition?.y) {
       return;
     }
@@ -423,11 +423,10 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     const compactedLayout = compact(newLayouts, compactType, cols);
     const compactedItem = getLayoutItem(compactedLayout, layoutItem.i);
 
-    this.setState({
+    this.handleLayoutsChange(compactedLayout, {
       draggingItem: layoutItem,
       prevPosition: position,
       placeholder: pickLayoutItem(compactedItem),
-      layouts: compactedLayout,
     });
   }
 
@@ -436,8 +435,10 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
    */
   moveCardItem(item: DragItem, offset: XYCoord): LayoutItem | null {
     const { droppingItem } = this.props;
-    const { draggingItem, layouts } = this.state;
+    const { draggingItem, layouts, engine } = this;
+
     let layoutItem: LayoutItem;
+
     if (!draggingItem) {
       if (!droppingItem) {
         return null;
@@ -459,6 +460,9 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     }
 
     if (layoutItem) {
+      if (engine.draggingItem?.i !== layoutItem.i) {
+        this.engine.toggleDraggingItem(layoutItem, false);
+      }
       this.removeHoverdGroupItem(layoutItem);
       this.moveItem(layoutItem, offset);
     }
@@ -471,8 +475,8 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
    * or move group item to other group layout
    */
   moveGroupItem(item: DragItem, offset: XYCoord, itemType: string): LayoutItem {
-    const { group } = this;
-    const { layouts } = this.state;
+    const { group, layouts } = this;
+
     let layoutItem = getLayoutItem(layouts, item.i);
     // drag group item to other group
     if (!layoutItem) {
@@ -495,6 +499,9 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       layouts.push(layoutItem);
     }
 
+    if (this.engine.draggingItem?.i !== layoutItem.i) {
+      this.engine.toggleDraggingItem(layoutItem, false);
+    }
     this.removeHoverdGroupItem(layoutItem);
     this.moveItem(layoutItem, offset);
 
@@ -502,40 +509,31 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   }
 
   onDrop = (dragItem: DragItem, itemType: string) => {
-    const { draggingItem, layouts } = this.state;
+    const { draggingItem, layouts } = this;
     const index = layouts.findIndex((l) => l.i === draggingItem.i);
     const layoutItem = layouts[index];
-    delete layoutItem.placeholder;
+    const sourceLayout = groupLayouts[itemType];
 
     // group layout change
     if (itemType === this.group) {
       this.onLayoutMaybeChanged(layouts, this.oldLayouts);
-    } else {
-      // // new card item or other group item
-      const index = layouts.findIndex((l) => l.i === draggingItem.i);
-      const sourceLayout = groupLayouts[itemType];
-      // remove dragitem from layout
-      // use ondrop to custom handle layouts change when drag new item
-      layouts.splice(index, 1);
-
+    } else if (sourceLayout) {
       // item from other layout
-      if (sourceLayout) {
-        const { layouts: sourceLayouts } = sourceLayout.state;
-        const { oldLayouts: sourceOldLayouts } = sourceLayout;
-        // trigger change for the moved dragitem
-        sourceLayout.onLayoutMaybeChanged(sourceLayouts, sourceOldLayouts);
-      }
+      const { layouts: sourceLayouts } = sourceLayout;
+      const { oldLayouts: sourceOldLayouts } = sourceLayout;
+
+      // trigger change for the moved dragitem
+      sourceLayout.onLayoutMaybeChanged(sourceLayouts, sourceOldLayouts, true);
     }
 
     this.resetDraggingState(draggingItem.i);
 
-    setComDisplay(draggingItem.i, 'block');
-
+    this.engine.toggleDraggingItem(layoutItem, true);
     this.props.onDrop?.(layouts, layoutItem, { item: dragItem, type: itemType }, this.group);
   };
 
   onDragStart = (dragItem: DragItem) => {
-    const { layouts } = this.state;
+    const { layouts } = this;
     const layoutItem = getLayoutItem(layouts, dragItem.i);
 
     this.props.onDragStart?.(layoutItem);
@@ -546,25 +544,30 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   };
 
   onDragEnd = (item: LayoutItem, didDrop: boolean, itemType: string) => {
+    this.engine.toggleDraggingItem(item, true);
+
     // handle by onDrop
     if (didDrop) {
       return;
     }
 
-    const { layouts } = this.state;
+    const { layouts } = this;
     const index = layouts.findIndex((l) => l.i === item.i);
     const layoutItem = layouts[index];
-
-    if (!isEqual([layoutItem], [item])) {
-      this.onDrop(item, itemType);
-    }
+    const isDrop = !isEqual([layoutItem], [item]);
 
     if (this.isGroupItem(itemType)) {
-      this.setState({
-        layouts: cloneLayouts(this.oldLayouts),
-      });
+      this.handleLayoutsChange(cloneLayouts(this.oldLayouts));
 
-      this.resetDraggingState(item.i);
+      // onDrop中已经有处理，且还会用到相关的属性
+      // 所以这里不处理
+      if (!isDrop) {
+        this.resetDraggingState(item.i);
+      }
+    }
+
+    if (isDrop) {
+      this.onDrop(item, itemType);
     }
   };
 
@@ -577,27 +580,18 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   };
 
   resetDraggingState(i: string) {
-    const { layouts } = this.state;
-    const layoutItem = getLayoutItem(layouts, i);
-
-    if (layoutItem) {
-      delete layoutItem.placeholder;
-    }
-
     hoveredGroups = [];
 
-    this.setState({
-      draggingItem: null,
-      placeholder: null,
-      prevPosition: null,
-    });
+    this.draggingItem = null;
+    this.prevPosition = null;
     this.oldLayouts = null;
-    this.scrollbar = null;
+
+    this.placeholderRef.current?.updatePlaceholder(null);
   }
 
   onCardItemDragEnd = (item: DragItem, didDrop: boolean, itemType: string) => {
     const { allowOutBoundedDrop } = this.props;
-    const { layouts, draggingItem } = this.state;
+    const { layouts, draggingItem } = this;
 
     if (!draggingItem) {
       return;
@@ -609,15 +603,12 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
         if (isDrop && !this.isHoverFlowLayout) {
           this.onDrop(item, itemType);
         } else {
-          this.setState({
-            draggingItem: null,
-            placeholder: null,
-            prevPosition: null,
-            layouts: cloneLayouts(layouts),
-          });
-
           this.oldLayouts = cloneLayouts(layouts);
-
+          this.handleLayoutsChange(cloneLayouts(layouts), {
+            placeholder: null,
+            draggingItem: null,
+            prevPosition: null,
+          });
           this.onLayoutMaybeChanged(cloneLayouts(layouts), this.oldLayouts);
         }
 
@@ -629,11 +620,10 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       if (index > -1) {
         layouts.splice(index, 1);
 
-        this.setState({
-          draggingItem: null,
+        this.handleLayoutsChange(cloneLayouts(this.oldLayouts), {
           placeholder: null,
+          draggingItem: null,
           prevPosition: null,
-          layouts: cloneLayouts(this.oldLayouts),
         });
       }
     } else {
@@ -644,7 +634,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   };
 
   onResize = (item: LayoutItem, w: number, h: number, direction: string) => {
-    const { layouts } = this.state;
+    const { layouts } = this;
     const { cols, compactType, preventCollision } = this.props;
     const [newLayouts, l] = withLayoutItem(layouts, item.i, (l) => {
       // Something like quad tree should be used
@@ -688,8 +678,10 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     }
 
     // Re-compact the newLayout and set the drag placeholder.
-    this.setState({
-      layouts: compact(newLayouts, compactType, cols),
+    this.handleLayoutsChange(compact(newLayouts, compactType, cols), {
+      isDragging: false,
+      draggingItem: null,
+      prevPosition: null,
       placeholder: {
         w: direction === 'w' ? l.w : Math.round(l.w),
         h: l.h,
@@ -702,7 +694,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   };
 
   onResizeStop = (item: LayoutItem) => {
-    const { layouts } = this.state;
+    const { layouts } = this;
     const { cols, compactType, onResizeStop } = this.props;
     withLayoutItem(layouts, item.i, (l) => {
       l.w = Math.round(l.w);
@@ -713,18 +705,17 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     const newLayouts = compact(layouts, compactType, cols);
 
     if (!isEqual(newLayouts, layouts)) {
-      this.setState({ layouts: newLayouts, placeholder: null });
-    } else {
-      this.setState({ placeholder: null });
+      this.handleLayoutsChange(newLayouts);
     }
 
+    this.placeholderRef.current.updatePlaceholder(null);
     this.onLayoutMaybeChanged(newLayouts, this.oldLayouts);
     onResizeStop?.(item, newLayouts);
   };
 
   getPositionParams = () => {
     const { cols, margin, maxRows, rowHeight, containerPadding } = this.props;
-    const { containerWidth } = this.state;
+    const { containerWidth } = this;
 
     return {
       cols,
@@ -736,22 +727,28 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     };
   };
 
-  renderPlaceholder = (placeholder: LayoutItem) => {
-    if (!placeholder) {
-      return null;
+  initAutoHeight(item: LayoutItem, layoutDom: HTMLDivElement) {
+    if (!item.autoHeight) {
+      return;
     }
-    const { layouts } = this.state;
 
-    const { i, x, y } = placeholder;
-    const positionParams = this.getPositionParams();
-    const leftSpacing = calcLeftSpacing(layouts, placeholder);
-    const { w, h } = getWH(placeholder, this.getPositionParams(), leftSpacing);
-    const position = calcGridItemPosition(positionParams, x, y, w, h);
-    return <div key={i} className={`${prefixCls}-placeholder`} style={setTransform(position)} />;
+    const el: any = layoutDom.firstChild;
+    const observe = observeDom(el, this.handleObserve(el, item));
+
+    el._observe = observe;
+  }
+
+  onItemMount = (layout: LayoutItem, dom: HTMLDivElement) => {
+    this.engine.setLayoutDOM(layout, dom);
+    this.initAutoHeight(layout, dom);
+  };
+
+  onItemUnmount = (layout: LayoutItem, dom: HTMLDivElement) => {
+    this.engine.setLayoutDOM(layout, null);
   };
 
   renderItems() {
-    const { placeholder, layouts, draggingItem } = this.state;
+    const { layouts, draggingItem } = this;
     const { children, resizeHandles } = this.props;
 
     return React.Children.map(children, (child: React.ReactElement) => {
@@ -777,8 +774,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
           type={this.group}
           leftSpacing={calcLeftSpacing(layouts, item)}
           data={getLayoutItem(layouts, l.i)}
-          placeholder={l.i === placeholder?.i}
-          isDragging={!!this.state.draggingItem}
+          isDragging={!!this.draggingItem}
           {...this.getPositionParams()}
           className={child.props.className}
           onClick={child.props.onClick}
@@ -790,9 +786,12 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
           onResizeStart={this.onDragStart}
           onResize={this.onResize}
           onResizeStop={this.onResizeStop}
+          onMount={this.onItemMount}
+          onUnmount={this.onItemUnmount}
         >
           {React.cloneElement(child, {
             ...child.props,
+            'data-i': item.i,
             // move child className to item
             className: '',
             onMouseEnter: undefined,
@@ -804,7 +803,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   }
 
   render() {
-    const { layouts, accept, placeholder } = this.state;
+    const { accept } = this.state;
     const {
       style,
       margin,
@@ -812,12 +811,12 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       containerPadding,
       droppable,
       className,
-      scrollbarContainer,
+      scrollbarContainer = this.getScrollbarContainer,
     } = this.props;
 
     const clsNameStr = `${prefixCls} ${className}`.trim();
     const containerStyle: CSSProperties = {
-      height: getContainerHeight(layouts, {
+      height: getContainerHeight(this.layouts, {
         margin,
         rowHeight,
         containerPadding,
@@ -838,7 +837,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
         onDragEnter={this.onDragEnter}
       >
         <div ref={this.containerRef} className={clsNameStr} style={containerStyle}>
-          {this.renderPlaceholder(placeholder)}
+          <Placeholder ref={this.placeholderRef} />
           {this.renderItems()}
         </div>
       </Droppable>

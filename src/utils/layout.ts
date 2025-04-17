@@ -128,7 +128,7 @@ export function getFirstCollision(layouts: LayoutItem[], layoutItem: LayoutItem)
  * @param  {LayoutItem} itemToMove   Layout item we're moving.
  */
 export function moveElementAwayFromCollision(
-  layouts: LayoutItem[],
+  layout: LayoutItem[],
   collidesWith: LayoutItem,
   itemToMove: LayoutItem,
   isUserAction: boolean,
@@ -137,7 +137,7 @@ export function moveElementAwayFromCollision(
 ): LayoutItem[] {
   const compactH = compactType === 'horizontal';
   // Compact vertically if not set to horizontal
-  const compactV = compactType !== 'horizontal';
+  const compactV = compactType === 'vertical';
   const preventCollision = collidesWith.static; // we're already colliding (not for static items)
 
   // If there is enough space above the collision to put this element, move it there.
@@ -156,10 +156,14 @@ export function moveElementAwayFromCollision(
       i: '-1',
     };
 
+    const firstCollision = getFirstCollision(layout, fakeItem);
+    const collisionNorth = firstCollision && firstCollision.y + firstCollision.h > collidesWith.y;
+    const collisionWest = firstCollision && collidesWith.x + collidesWith.w > firstCollision.x;
+
     // No collision? If so, we can go up there; otherwise, we'll end up moving down as normal
-    if (!getFirstCollision(layouts, fakeItem)) {
+    if (!firstCollision) {
       return moveElement(
-        layouts,
+        layout,
         itemToMove,
         compactH ? fakeItem.x : undefined,
         compactV ? fakeItem.y : undefined,
@@ -168,11 +172,44 @@ export function moveElementAwayFromCollision(
         compactType,
         cols
       );
+    } else if (collisionNorth && compactV) {
+      return moveElement(
+        layout,
+        itemToMove,
+        undefined,
+        collidesWith.y + 1,
+        isUserAction,
+        preventCollision,
+        compactType,
+        cols
+      );
+    } else if (collisionNorth && compactType == null) {
+      collidesWith.y = itemToMove.y;
+      itemToMove.y = itemToMove.y + itemToMove.h;
+
+      return layout;
+    } else if (collisionWest && compactH) {
+      return moveElement(
+        layout,
+        collidesWith,
+        itemToMove.x,
+        undefined,
+        isUserAction,
+        preventCollision,
+        compactType,
+        cols
+      );
     }
   }
 
+  const newX = compactH ? itemToMove.x + 1 : undefined;
+  const newY = compactV ? itemToMove.y + 1 : undefined;
+
+  if (newX == null && newY == null) {
+    return layout;
+  }
   return moveElement(
-    layouts,
+    layout,
     itemToMove,
     compactH ? itemToMove.x + 1 : undefined,
     compactV ? itemToMove.y + 1 : undefined,
@@ -337,7 +374,7 @@ export function compact(
  * @param  {Number}     [y]               Y position in grid units.
  */
 export function moveElement(
-  layouts: LayoutItem[],
+  layout: LayoutItem[],
   l: LayoutItem,
   x: number,
   y: number,
@@ -348,10 +385,10 @@ export function moveElement(
 ): LayoutItem[] {
   // If this is static and not explicitly enabled as draggable,
   // no move is possible, so we can short-circuit this immediately.
-  if (l.static && l.isDraggable !== true) return layouts;
+  if (l.static && l.isDraggable !== true) return layout;
 
   // Short-circuit if nothing to do.
-  if (l.y === y && l.x === x) return layouts;
+  if (l.y === y && l.x === x) return layout;
 
   const oldX = l.x;
   const oldY = l.y;
@@ -365,7 +402,7 @@ export function moveElement(
   // When doing this comparison, we have to sort the items we compare with
   // to ensure, in the case of multiple collisions, that we're getting the
   // nearest collision.
-  let sorted = sortLayoutItems(layouts, compactType);
+  let sorted = sortLayoutItems(layout, compactType);
   const movingUp =
     compactType === 'vertical' && typeof y === 'number'
       ? oldY >= y
@@ -375,13 +412,16 @@ export function moveElement(
   // $FlowIgnore acceptable modification of read-only array as it was recently cloned
   if (movingUp) sorted = sorted.reverse();
   const collisions = getAllCollisions(sorted, l);
+  const hasCollisions = collisions.length > 0;
 
-  // There was a collision; abort
-  if (preventCollision && collisions.length) {
+  if (hasCollisions && preventCollision) {
+    // If we are preventing collision but not allowing overlap, we need to
+    // revert the position of this element so it goes to where it came from, rather
+    // than the user's desired location.
     l.x = oldX;
     l.y = oldY;
     l.moved = false;
-    return layouts;
+    return layout; // did not change so don't clone
   }
 
   // Move each item that collides away from this element.
@@ -393,27 +433,13 @@ export function moveElement(
 
     // Don't move static items - we have to move *this* element away
     if (collision.static) {
-      layouts = moveElementAwayFromCollision(
-        layouts,
-        collision,
-        l,
-        isUserAction,
-        compactType,
-        cols
-      );
+      layout = moveElementAwayFromCollision(layout, collision, l, isUserAction, compactType, cols);
     } else {
-      layouts = moveElementAwayFromCollision(
-        layouts,
-        l,
-        collision,
-        isUserAction,
-        compactType,
-        cols
-      );
+      layout = moveElementAwayFromCollision(layout, l, collision, isUserAction, compactType, cols);
     }
   }
 
-  return layouts;
+  return layout;
 }
 
 /**
@@ -518,9 +544,6 @@ export function isIdEqual(layouts1: LayoutItem[], layouts2: LayoutItem[]) {
 }
 
 export function isEqual(layouts1: LayoutItem[], layouts2: LayoutItem[]) {
-  const s1 = layouts1?.map(pickLayoutItem);
-  const s2 = layouts2?.map(pickLayoutItem);
-
   return lodashEqual(layouts1, layouts2);
 }
 
@@ -534,7 +557,7 @@ export function getScrollbar(node: HTMLElement): HTMLElement | null {
   while (target.tagName !== 'BODY') {
     const { overflowY } = window.getComputedStyle(target);
 
-    if ((overflowY === 'scroll' || overflowY === 'auto') && target.scrollTop) {
+    if (overflowY === 'scroll' || overflowY === 'auto') {
       return target;
     }
 
@@ -578,4 +601,14 @@ export function UUID(len = 32) {
       return v.toString(16);
     })
     .substring(0, len);
+}
+
+type Item = Pick<LayoutItem, 'x' | 'y' | 'w' | 'h'>;
+
+export function isLayoutChange(prev: Item, next: Item) {
+  if (!prev || !next) return true;
+
+  const { x, y, w, h } = next;
+
+  return prev.x !== x || prev.y !== y || prev.w !== w || prev.h !== h;
 }

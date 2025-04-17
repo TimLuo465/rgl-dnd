@@ -1,12 +1,11 @@
 import throttle from 'lodash.throttle';
 import React, { PureComponent, SyntheticEvent } from 'react';
+import ReactDOM from 'react-dom';
 import { ResizableBox, ResizeCallbackData, ResizeHandle } from 'react-resizable';
 import { prefixCls } from '../constants';
 import { ItemProps, ItemStates, LayoutItem, PositionParams, Size } from '../types';
 import { calcGridItemPosition, calcWH, getWH, setTransform } from '../utils';
 import Draggable from './Draggable';
-
-type ResizeEventType = 'onResizeStart' | 'onResize' | 'onResizeStop';
 
 // 如果是流式容器，默认只能左右拉伸
 const flowLayoutHandles: ResizeHandle[] = ['w', 'e'];
@@ -29,13 +28,27 @@ const getPosition = (data: LayoutItem, positionParams: PositionParams, state: It
 };
 
 export default class Item extends PureComponent<ItemProps, ItemStates> {
+  itemRef = React.createRef<any>();
+
   state: ItemStates = {
     resizing: null,
     direction: '',
   };
 
+  componentDidMount() {
+    const { data } = this.props;
+    const itemDOM = ReactDOM.findDOMNode(this.itemRef.current);
+
+    this.props.onMount?.(data, itemDOM as HTMLDivElement);
+  }
+
+  componentWillUnmount() {
+    const { data } = this.props;
+    this.props.onUnmount?.(data, this.itemRef.current);
+  }
+
   pickProps(props: ItemProps) {
-    const { isDragging, placeholder, ...restProps } = props;
+    const { isDragging, ...restProps } = props;
 
     return restProps;
   }
@@ -51,7 +64,7 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
     const { size, handle } = callbackData;
     this.setState({ direction: handle });
     this.setResizing(size);
-    this.props.onResizeStart?.(data)
+    this.props.onResizeStart?.(data);
   };
 
   onResize = throttle((e: SyntheticEvent, callbackData: ResizeCallbackData) => {
@@ -79,7 +92,7 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
       wh.h = data.h;
     }
 
-    this.setResizing(size)
+    this.setResizing(size);
     this.props.onResize?.(data, wh.w, wh.h, handle);
   }, 1 / 60);
 
@@ -89,7 +102,7 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
     const { data } = this.props;
     this.setState({ direction: '' });
     this.setResizing(null);
-    this.props.onResizeStop?.(data)
+    this.props.onResizeStop?.(data);
   };
 
   getResizeHandles = () => {
@@ -117,7 +130,8 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
       rowHeight,
       maxRows,
       isDragging,
-      placeholder,
+      onMount,
+      onUnmount,
       ...restProps
     } = this.props;
     const { resizing, direction } = this.state;
@@ -141,12 +155,13 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
       0
     );
 
-    const resizeHandles = this.getResizeHandles()
+    const resizeHandles = this.getResizeHandles();
 
     return (
       <ResizableBox
         {...restProps}
         {..._style}
+        ref={this.itemRef}
         width={position.width}
         height={position.height}
         onResizeStart={this.onResizeStart}
@@ -156,11 +171,11 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
         minConstraints={[minWidth, 10]}
         maxConstraints={[maxWidth, Infinity]}
         draggableOpts={{
-          enableUserSelectHack: false
+          enableUserSelectHack: false,
         }}
-        className={`${prefixCls}-item${isDragging && placeholder ? '-placeholder' : ''} ${data.autoHeight ? `${prefixCls}-autoheight` : ''
-          } ${className}`.trim()
-        }
+        className={`${prefixCls}-item ${
+          data.autoHeight ? `${prefixCls}-autoheight` : ''
+        } ${className}`.trim()}
       >
         <Draggable
           type={type}
@@ -171,7 +186,7 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
         >
           {children}
         </Draggable>
-      </ResizableBox >
+      </ResizableBox>
     );
   }
 }

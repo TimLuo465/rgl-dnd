@@ -3,14 +3,15 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import LayoutProvider from './LayoutContext';
 
-export default class Provider extends React.PureComponent {
-  render() {
-    const { children } = this.props;
+interface ProviderProps extends React.Attributes {
+  children: React.ReactNode;
+}
+export default function Provider(props: ProviderProps) {
+  const { children } = props;
 
-    return (
-      <DndProvider backend={HTML5Backend}>
-        <LayoutProvider>{children}</LayoutProvider>
-      </DndProvider>
-    );
-  }
+  return (
+    <DndProvider backend={HTML5Backend}>
+      <LayoutProvider>{children}</LayoutProvider>
+    </DndProvider>
+  );
 }

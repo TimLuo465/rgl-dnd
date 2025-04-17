@@ -117,12 +117,13 @@ export type ItemProps = Omit<
   PositionParams & {
     data: LayoutItem;
     isDragging?: boolean;
-    placeholder?: boolean;
     leftSpacing?: number;
     resizeHandles?: ResizeHandle[];
     onResizeStart?: (data: LayoutItem) => void;
     onResize?: (data: LayoutItem, w: number, h: number, direction: string) => void;
     onResizeStop?: (data: LayoutItem) => void;
+    onMount?: (data: LayoutItem, item: HTMLDivElement) => void;
+    onUnmount?: (data: LayoutItem, item: HTMLDivElement) => void;
   };
 
 export type Size = {
