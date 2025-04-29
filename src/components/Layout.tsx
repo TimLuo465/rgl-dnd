@@ -278,7 +278,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     if (containerDOM && containerDOM.offsetWidth !== containerWidth) {
       this.offset = containerDOM.getBoundingClientRect();
       this.containerWidth = containerDOM.offsetWidth;
-      this.engine.updateLayouts(this.layouts);
+      this.forceUpdate();
     }
   };
 
