@@ -204,7 +204,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   handleObserve(el: HTMLElement, item: LayoutItem) {
     return debounce(() => {
       // 避免autoHeight动态变化的情况
-      if (!item.autoHeight) {
+      if (!item.autoHeight || this.draggingItem) {
         return;
       }
 
@@ -422,11 +422,12 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
 
     const compactedLayout = compact(newLayouts, compactType, cols);
     const compactedItem = getLayoutItem(compactedLayout, layoutItem.i);
+    const placeholder = pickLayoutItem(compactedItem);
 
     this.handleLayoutsChange(compactedLayout, {
+      placeholder,
       draggingItem: layoutItem,
       prevPosition: position,
-      placeholder: pickLayoutItem(compactedItem),
     });
   }
 
@@ -436,7 +437,6 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   moveCardItem(item: DragItem, offset: XYCoord): LayoutItem | null {
     const { droppingItem } = this.props;
     const { draggingItem, layouts, engine } = this;
-
     let layoutItem: LayoutItem;
 
     if (!draggingItem) {
@@ -476,8 +476,8 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
    */
   moveGroupItem(item: DragItem, offset: XYCoord, itemType: string): LayoutItem {
     const { group, layouts } = this;
-
     let layoutItem = getLayoutItem(layouts, item.i);
+
     // drag group item to other group
     if (!layoutItem) {
       if (itemType !== group) {
