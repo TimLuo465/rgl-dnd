@@ -61,8 +61,12 @@ export default class SnapLine {
   };
 
   resizeStart(resizeItem: LayoutItem, layouts: LayoutItem[], setResizing: SetResizing) {
+    const { i, x, w } = resizeItem;
+
     this.layouts = layouts
-      .filter((layout) => layout.i !== resizeItem.i)
+      .filter((layout) => {
+        return layout.i !== i && (layout.x <= x || layout.x >= x + w);
+      })
       .sort((l1, l2) => l1.h + l1.y - (l2.h + l2.y));
 
     this.resizeItem = { ...resizeItem };
@@ -72,6 +76,7 @@ export default class SnapLine {
   reize(size: { w: number; h: number }, opts: OptsType) {
     const { positionParams, onResize } = opts;
     const { w, h } = size;
+    const { rowHeight, margin } = positionParams;
 
     if (this.resizeItem.h !== h) {
       const direction = this.resizeItem.h > h ? 'n' : 's';
@@ -81,9 +86,11 @@ export default class SnapLine {
       // 根据高度变化，找最临近高度变化的item
       const lastItem = this.getLastLayoutItem(direction);
 
+      let height;
+
       if (lastItem) {
-        const { rowHeight, margin } = positionParams;
-        const height = calcGridItemWHPx(h + this.resizeItem.y, rowHeight, margin[1]);
+        height = calcGridItemWHPx(h + this.resizeItem.y, rowHeight, margin[1]);
+
         const lastItemHeight = calcGridItemWHPx(lastItem.h + lastItem.y, rowHeight, margin[1]);
 
         // 判断最临近Item 跟 现在拖拽Item 的高度差，如果小于等于15px，显示吸附线
@@ -118,8 +125,12 @@ export default class SnapLine {
 
           return;
         }
+      }
 
-        if (this.preSnapLayoutHeight && Math.abs(height - this.preSnapLayoutHeight) >= 10) {
+      if (this.preSnapLayoutHeight) {
+        height = height || calcGridItemWHPx(h + this.resizeItem.y, rowHeight, margin[1]);
+
+        if (Math.abs(height - this.preSnapLayoutHeight) >= 10) {
           this.snaplineRef.current.updateSnapLine(null);
           this.preSnapLayoutHeight = 0;
         }
@@ -130,5 +141,6 @@ export default class SnapLine {
   resizeStop() {
     // 更新吸附线样式
     this.snaplineRef.current.updateSnapLine(null);
+    this.preSnapLayoutHeight = 0;
   }
 }
