@@ -1,8 +1,12 @@
 import { CSSProperties } from 'styled-components';
 import { LayoutItem, PositionParams } from '../types';
 import { calcGridItemPosition, isLayoutChange, setTransform } from '../utils';
+import { ResizeSnapLineRef } from './ResizeSnapLine';
+import SnapLine from './SnapLine';
 
 type OptsType = {
+  enableSnapLine: boolean;
+  snaplineRef: React.RefObject<ResizeSnapLineRef>;
   scrollContainer: HTMLElement;
   getPositionParams: () => PositionParams;
 };
@@ -23,10 +27,17 @@ export default class Engine {
   /** 视窗范围内Layout Item 的可见状态 */
   itemsVisibleMap: Record<string, boolean> = {};
 
+  /** 吸附线 */
+  snapline: SnapLine | null = null;
+
   init(container: HTMLElement, opts: OptsType) {
     this.container = container;
     this.getPositionParams = opts.getPositionParams;
     this.scrollContainer = opts.scrollContainer;
+
+    if (opts.enableSnapLine) {
+      this.snapline = new SnapLine({ snaplineRef: opts.snaplineRef });
+    }
   }
 
   updateLayouts(layouts: LayoutItem[]) {
