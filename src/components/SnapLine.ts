@@ -61,11 +61,24 @@ export default class SnapLine {
   };
 
   resizeStart(resizeItem: LayoutItem, layouts: LayoutItem[], setResizing: SetResizing) {
-    const { i, x, w } = resizeItem;
+    const { i, x, y, w, h } = resizeItem;
 
+    let minX = x;
+    let maxX = x + w;
+
+    // 获取当前组件向上下拖拽时，能够对的layouts
     this.layouts = layouts
+      .sort((l1, l2) => l1.y - l2.y)
       .filter((layout) => {
-        return layout.i !== i && (layout.x <= x || layout.x >= x + w);
+        const canJustify =
+          layout.i !== i && layout.y >= y && (layout.x + layout.w <= minX || layout.x >= maxX);
+
+        if (layout.i !== i && canJustify && layout.y >= y + h) {
+          minX = Math.min(minX, layout.x);
+          maxX = Math.max(maxX, layout.x + layout.w);
+        }
+
+        return canJustify;
       })
       .sort((l1, l2) => l1.h + l1.y - (l2.h + l2.y));
 
