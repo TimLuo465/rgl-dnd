@@ -53,9 +53,9 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
     return restProps;
   }
 
-  setResizing(resizing: Size) {
+  setResizing = (resizing: Size) => {
     this.setState({ resizing });
-  }
+  };
 
   onResizeStart = (e: SyntheticEvent, callbackData: ResizeCallbackData) => {
     e.preventDefault();
@@ -64,7 +64,7 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
     const { size, handle } = callbackData;
     this.setState({ direction: handle });
     this.setResizing(size);
-    this.props.onResizeStart?.(data);
+    this.props.onResizeStart?.(data, handle, this.setResizing);
   };
 
   onResize = throttle((e: SyntheticEvent, callbackData: ResizeCallbackData) => {
@@ -99,10 +99,12 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
   onResizeStop = (e: SyntheticEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    const { direction } = this.state;
     const { data } = this.props;
     this.setState({ direction: '' });
     this.setResizing(null);
-    this.props.onResizeStop?.(data);
+    this.props.onResizeStop?.(data, direction);
   };
 
   getResizeHandles = () => {
