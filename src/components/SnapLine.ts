@@ -73,7 +73,13 @@ export default class SnapLine {
         const canJustify =
           layout.i !== i && layout.y >= y && (layout.x + layout.w <= minX || layout.x >= maxX);
 
-        if (layout.i !== i && canJustify && layout.y >= y + h) {
+        // 组件向下拖拽时有交叉的部分，会影响下方所有layout 跟着一起变动
+        if (
+          layout.i !== i &&
+          layout.y >= y + h &&
+          ((layout.x < minX && layout.x + layout.w > minX) ||
+            (layout.x + layout.w > maxX && layout.x < maxX))
+        ) {
           minX = Math.min(minX, layout.x);
           maxX = Math.max(maxX, layout.x + layout.w);
         }
