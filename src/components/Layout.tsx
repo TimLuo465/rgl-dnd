@@ -180,7 +180,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     this.event.emit('mounted');
   }
 
-  componentDidUpdate(prevProps: LayoutProps) {
+  componentDidUpdate() {
     if (hoveredGroups.length) {
       return;
     }
@@ -189,7 +189,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     const newLayouts = reLayout(layouts, compactType, cols);
 
     this.handleLayoutsChange(newLayouts);
-    this.onLayoutMaybeChanged(newLayouts, prevProps.layouts, false);
+    this.onLayoutMaybeChanged(newLayouts, layouts, false);
   }
 
   componentWillUnmount() {

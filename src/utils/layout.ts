@@ -492,7 +492,8 @@ export function pickDroppingItem(item: DragItem): Partial<LayoutItem> {
 }
 
 export function reLayout(layouts: LayoutItem[], compactType: CompactType, cols: number) {
-  const newLayouts = correctBounds(layouts, { cols });
+  const clonedLayouts = layouts.map((l) => ({ ...l }));
+  const newLayouts = correctBounds(clonedLayouts, { cols });
 
   return compact(newLayouts, compactType, cols);
 }
