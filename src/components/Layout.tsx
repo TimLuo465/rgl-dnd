@@ -219,13 +219,17 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       const positionParams = this.getPositionParams();
       const h = calcH(positionParams, height, item.y);
       const oldLayout = this.layouts.find((l) => l.i === item.i);
+      const { compactType, cols } = this.props;
 
       if (!oldLayout?.h || oldLayout.h !== h) {
         if (oldLayout) {
           oldLayout.h = h;
         }
-        this.handleLayoutsChange(this.layouts);
-        this.onLayoutMaybeChanged(this.layouts, [], false, true);
+
+        const newLayouts = reLayout(this.layouts, compactType, cols);
+
+        this.handleLayoutsChange(newLayouts);
+        this.onLayoutMaybeChanged(newLayouts, [], false, true);
       }
     }, 50);
   }
