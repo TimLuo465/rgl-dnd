@@ -784,7 +784,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
 
   renderItems() {
     const { layouts, draggingItem } = this;
-    const { children, resizeHandles } = this.props;
+    const { layouts: _layouts, children, resizeHandles } = this.props;
 
     return React.Children.map(children, (child: React.ReactElement) => {
       const l = child.props['data-grid'];
@@ -796,7 +796,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       if (draggingItem?.i === l.i) {
         item = draggingItem;
       } else {
-        item = getLayoutItem(layouts, l.i);
+        item = getLayoutItem(layouts, l.i) || getLayoutItem(_layouts, l.i);
       }
 
       if (!item) {
@@ -808,7 +808,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
           key={l.i}
           type={this.group}
           leftSpacing={calcLeftSpacing(layouts, item)}
-          data={getLayoutItem(layouts, l.i)}
+          data={item}
           isDragging={!!this.draggingItem}
           {...this.getPositionParams()}
           className={child.props.className}
