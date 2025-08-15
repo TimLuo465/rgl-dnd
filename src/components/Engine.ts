@@ -1,4 +1,3 @@
-import { CSSProperties } from 'styled-components';
 import { LayoutItem, PositionParams } from '../types';
 import { calcGridItemPosition, isLayoutChange, setTransform } from '../utils';
 import { ResizeSnapLineRef } from './ResizeSnapLine';
@@ -51,6 +50,9 @@ export default class Engine {
 
     layouts.forEach((l) => {
       if (this.draggingItem?.i === l.i) {
+        const { i, x, y, w, h } = l;
+
+        this.prevLayouts[i] = { x, y, w, h };
         return;
       }
 
@@ -126,12 +128,18 @@ export default class Engine {
     }
 
     const position = calcGridItemPosition(positionParams, x, y, w, h);
-    const style: CSSProperties = setTransform(position);
+    const style = setTransform(position);
 
     this.prevLayouts[layout.i] = { x, y, w, h };
 
+    const styleCssText = `transform: ${style.transform}; width: ${style.width}px; height: ${style.height}px`;
+    const layoutDomCssText = layoutDom.style.cssText
+      .split(';')
+      .filter((cssText) => !['transform', 'width', 'height'].includes(cssText))
+      .join(';');
+
     // card外有一层data-i的容器，所以这里取parentElement
-    Object.assign(layoutDom.style, style);
+    layoutDom.setAttribute('style', layoutDomCssText + styleCssText);
   }
 
   private calcScrollArea(positionParams: PositionParams) {
