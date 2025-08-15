@@ -808,7 +808,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
           key={l.i}
           type={this.group}
           leftSpacing={calcLeftSpacing(layouts, item)}
-          data={item}
+          data={getLayoutItem(layouts, l.i) || getLayoutItem(_layouts, l.i)}
           isDragging={!!this.draggingItem}
           {...this.getPositionParams()}
           className={child.props.className}
