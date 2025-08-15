@@ -133,9 +133,13 @@ export default class Engine {
     this.prevLayouts[layout.i] = { x, y, w, h };
 
     const styleCssText = `transform: ${style.transform}; width: ${style.width}px; height: ${style.height}px`;
+    const layoutDomCssText = layoutDom.style.cssText
+      .split(';')
+      .filter((cssText) => !['transform', 'width', 'height'].includes(cssText))
+      .join(';');
 
     // card外有一层data-i的容器，所以这里取parentElement
-    layoutDom.setAttribute('style', layoutDom.style.cssText + styleCssText);
+    layoutDom.setAttribute('style', layoutDomCssText + styleCssText);
   }
 
   private calcScrollArea(positionParams: PositionParams) {
