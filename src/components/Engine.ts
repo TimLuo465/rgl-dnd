@@ -135,9 +135,7 @@ export default class Engine {
     const styleCssText = `transform: ${style.transform}; width: ${style.width}px; height: ${style.height}px`;
     const layoutDomCssText = layoutDom.style.cssText
       .split(';')
-      .filter(
-        (cssText) => !['transform', 'width', 'height'].some((cssName) => cssText.includes(cssName))
-      )
+      .filter((cssText) => /transform|width|height/.test(cssText))
       .join(';');
 
     // card外有一层data-i的容器，所以这里取parentElement
