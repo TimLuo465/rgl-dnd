@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CSSProperties } from 'styled-components';
 import { Draggable, FlowLayout, Layout, Provider } from '..';
-import { DEFAULT_GROUP } from '../constants';
 import { LayoutItem } from '../types';
 import { checkArray, getNewLayouts, UUID } from '../utils';
 
@@ -20,16 +19,6 @@ const mockLayouts = [
   },
 ];
 
-const mockFlowLayouts = [
-  {
-    i: '1111111111111111',
-    nodeId: '111',
-    type: 'flow-container',
-    isCanvas: true,
-    parentId: 'ROOT',
-  },
-];
-
 const containerStyle: CSSProperties = {
   float: 'left',
   width: '100%',
@@ -38,23 +27,15 @@ const containerStyle: CSSProperties = {
   overflow: 'auto',
 };
 
-const Item: React.FC = () => {
-  const [count, setCount] = useState(0);
-
-  return <button onClick={() => setCount(count + 1)}>{count}</button>;
-};
 export const Default: React.FC = () => {
   const [layouts, setLayouts] = useState<LayoutItem[]>(mockLayouts);
-  const [flowLayouts, setFlowLayouts] = useState<any>(mockFlowLayouts);
   const [isResetLayout, setIsResetLayout] = useState<boolean>(false);
-  const [clsName, setClsName] = useState<string>('');
   const [isDropContainer, setIsDropContainer] = useState<boolean>(false);
   const ref1 = useRef(null);
   const [layouts2, setLayouts2] = useState<LayoutItem[]>([
     { i: '3', x: 0, y: 0, w: 2, h: 20 },
     { i: '4', x: 2, y: 0, w: 2, h: 20 },
   ]);
-  const [layouts3, setLayouts3] = useState<LayoutItem[]>([]);
 
   const droppingItem = {
     i: UUID(),
@@ -69,30 +50,16 @@ export const Default: React.FC = () => {
     x: 0,
     y: 0,
     w: 12,
-    h: 8.545454545454545,
-    // h: 23.454545454545453,
+    h: 8,
     isCanvas: true,
     autoHeight: true,
     children: [],
   };
 
-  // const deleteItem1 = (i) => {
-  //   const index = layouts.findIndex((l) => l.i === i);
-
-  //   layouts.splice(index, 1);
-  //   setLayouts(layouts);
-  // };
-  // const deleteItem2 = (i) => {
-  //   const index = layouts2.findIndex((l) => l.i === i);
-
-  //   layouts2.splice(index, 1);
-  //   setLayouts2(layouts2.slice());
-  // };
-
   const renderFlowLayout = (data) => {
     if (!checkArray(data)) return;
-    return data.map((item, index) => {
-      if (item === '123456') {
+    return data.map((item) => {
+      if (item.isCanvas) {
         return (
           <div data-flow={item} key={item.i}>
             <FlowLayout
@@ -106,7 +73,7 @@ export const Default: React.FC = () => {
           </div>
         );
       }
-      return renderFlowLayoutItem(item, index);
+      return renderFlowLayoutItem(item);
     });
   };
 
@@ -135,24 +102,7 @@ export const Default: React.FC = () => {
     );
   };
 
-  const renderFlowLayoutItem = (item, index) => {
-    // if (index % 2 === 0) {
-    //   return (
-    //     <img
-    //       src="https://img0.baidu.com/it/u=1734642970,311190705&fm=253&fmt=auto&app=138&f=JPEG?w=889&h=500"
-    //       alt=""
-    //       style={{
-    //         width: '100px',
-    //         height: '100px',
-    //         objectFit: 'cover',
-    //         verticalAlign: 'middle',
-    //       }}
-    //       data-flow={item}
-    //       key={item.i}
-    //       data-id={item.i}
-    //     />
-    //   );
-    // }
+  const renderFlowLayoutItem = (item) => {
     return <Box item={item} data-flow={{ i: item }} key={item}></Box>;
   };
 
@@ -173,39 +123,10 @@ export const Default: React.FC = () => {
     );
   };
 
-  const onMouseEnter = () => {
-    setIsResetLayout(true);
-  };
-  const onMouseLeave = () => {
-    setIsResetLayout(false);
-  };
-
   const onFlowLayoutHover = () => {
     if (isResetLayout) return;
     setIsResetLayout(true);
   };
-
-  // const renderFlowLayout1 = (data) => {
-  //   if (!checkArray(data)) return;
-  //   return data.map((item, index) => {
-  //     if (item.isCanvas) {
-  //       return (
-  //         <div data-flow={item}>
-  //           <FlowLayout
-  //             layouts={flowLayouts}
-  //             layoutItem={item}
-  //             droppingItem={mockFlowDroppingItem}
-  //             onDrop={onFlowLayoutDrop1}
-  //             EmptyContainer={EmptyContainer}
-  //           >
-  //             {renderFlowLayout1(item.children)}
-  //           </FlowLayout>
-  //         </div>
-  //       );
-  //     }
-  //     return renderFlowLayoutItem(item, index);
-  //   });
-  // };
 
   const onLayoutChange = useCallback(
     (newLayoutItem: any) => {
@@ -225,12 +146,7 @@ export const Default: React.FC = () => {
     (item) => {
       if (item.isCanvas) {
         return (
-          <div
-            data-grid={item}
-            key={item.i}
-            data-i={item.i}
-            style={{ display: 'flex', gap: '16px' }}
-          >
+          <div data-grid={item} key={item.i} data-i={item.i}>
             <FlowLayout
               layoutItem={item}
               empty={<EmptyContainer />}
@@ -246,30 +162,11 @@ export const Default: React.FC = () => {
       return (
         <div data-grid={item} data-id={item.i} key={item.i}>
           {item.i.substring(1, 5)}
-          {/* <button onClick={() => deleteItem1(item.i)}>delete</button> */}
         </div>
       );
     },
     [layouts]
   );
-
-  const filterLayouts = (layouts, layoutItem) => {
-    if (!layouts || !Array.isArray(layouts)) return;
-    const cloneData = JSON.parse(JSON.stringify(layouts));
-    for (let index = 0; index < cloneData.length; index++) {
-      const item = cloneData[index];
-      if (item.isCanvas) {
-        item.children = item.children.filter((i) => i !== layoutItem.i);
-      }
-      // if (item.i === layoutItem.parentId) {
-      //   item.children = item.children.filter((child) => child.i !== layoutItem.i);
-      // } else if (checkArray(item.children)) {
-      //   item.children = filterLayouts(item.children, layoutItem);
-      // }
-    }
-
-    return cloneData;
-  };
 
   const onFlowLayoutDrop = (layoutItem: any, draggingItem: any) => {
     // 如果组件是从网格布局中拖入到流式容器内，那么原有网格布局中的组件，应该删除
@@ -282,67 +179,10 @@ export const Default: React.FC = () => {
 
   const onDrop1 = (_layouts, layoutItem, dragInfo, group) => {
     if (dragInfo.type !== group) {
-      let newLayouts = _layouts;
-      newLayouts = filterLayouts(newLayouts, layoutItem);
-
-      newLayouts.push(layoutItem);
-
-      setLayouts(newLayouts.slice());
+      setLayouts(_layouts.slice());
     }
   };
-  const onDrop2 = (_layouts, layoutItem, dragInfo, group) => {
-    if (dragInfo.type !== group) {
-      layouts2.push(layoutItem);
-      setLayouts2(layouts2.slice());
-    }
-  };
-  const onDrop3 = (_layouts, layoutItem, dragInfo, group) => {
-    if (dragInfo.type !== group) {
-      layouts3.push({
-        ...layoutItem,
-        w: 12,
-      });
-      setLayouts3(layouts3.slice());
-    }
-  };
-  const renderItem2 = useCallback(
-    (item) => {
-      if (item.i === '3') {
-        return (
-          <div data-grid={item}>
-            <Layout
-              nested
-              rowHeight={1}
-              group={`${DEFAULT_GROUP}__${item.i}`}
-              layouts={layouts3}
-              margin={[0, 0]}
-              onDragOver={(l) => {
-                l.minW = 12;
-              }}
-              containerPadding={[0, 0]}
-              style={{ minHeight: '100%' }}
-              droppable={layouts3.length < 1}
-              droppingItem={{ ...droppingItem, w: 12, h: 5 }}
-              onDrop={onDrop3}
-              onLayoutChange={setLayouts3}
-            />
-          </div>
-        );
-      }
 
-      return (
-        <div
-          className={clsName}
-          data-grid={item}
-          onClick={() => setClsName(new Date().getTime().toString().substring(5))}
-        >
-          {item.i}-{clsName}
-          <Item />
-        </div>
-      );
-    },
-    [clsName]
-  );
   const onClick = () => {
     setLayouts2(
       layouts2.map((l) => {
@@ -366,9 +206,15 @@ export const Default: React.FC = () => {
   };
   return (
     <Provider>
-      <Draggable onDragStart={onDragStartBox}>组件1</Draggable>
-      <Draggable onDragStart={onDragStartBox}>组件2</Draggable>
-      <Draggable onDragStart={onDragStartCon}>容器</Draggable>
+      <Draggable data={{ i: UUID() }} onDragStart={onDragStartBox}>
+        组件1
+      </Draggable>
+      <Draggable data={{ i: UUID() }} onDragStart={onDragStartBox}>
+        组件2
+      </Draggable>
+      <Draggable data={{ i: UUID() }} onDragStart={onDragStartCon}>
+        容器
+      </Draggable>
       <div style={{ marginBottom: 20 }}>
         <button onClick={onClick}>change Layout</button>
       </div>
@@ -380,6 +226,8 @@ export const Default: React.FC = () => {
           rowHeight={1}
           cols={12}
           ref={ref1}
+          margin={[10, 10]}
+          containerPadding={[0, 0]}
           onDrop={onDrop1}
           onDragOver={(l) => {
             delete l.minW;
@@ -391,29 +239,6 @@ export const Default: React.FC = () => {
           {layouts.map((item) => renderItem1(item))}
         </Layout>
       </div>
-      {/* <div style={containerStyle}>
-        <Layout
-          style={{ minHeight: '100%' }}
-          droppingItem={droppingItem}
-          layouts={layouts2}
-          rowHeight={1}
-          cols={6}
-          margin={[10, 5]}
-          onDrop={onDrop2}
-          onDragOver={(l) => {
-            delete l.minW;
-          }}
-          onLayoutChange={(layouts) => {
-            console.log('change2: ', layouts);
-            setLayouts2(layouts);
-          }}
-        >
-          {layouts2.map((item) => renderItem2(item))}
-        </Layout>
-      </div> */}
-      {/* <div style={containerStyle} id="aaa">
-        {renderFlowLayout1(flowLayouts)}
-      </div> */}
     </Provider>
   );
 };

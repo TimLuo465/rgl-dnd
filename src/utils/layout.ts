@@ -99,8 +99,30 @@ export function collides(l1: LayoutItem, l2: LayoutItem): boolean {
   return true; // boxes overlap
 }
 
-export function getAllCollisions(layouts: LayoutItem[], layoutItem: LayoutItem): LayoutItem[] {
-  return layouts.filter((l) => collides(l, layoutItem));
+function max(exp: number, n = 0) {
+  return Math.max(exp, n);
+}
+
+export function collidesForDrag(l1: LayoutItem, l2: LayoutItem): boolean {
+  if (l1.i === l2.i) return false; // same element
+  if (l1.x + l1.w <= l2.x) return false; // l1 is left of l2
+  if (l1.x >= l2.x + l2.w) return false; // l1 is right of l2
+  if (max(l1.y + l1.h - 2) <= l2.y) return false; // l1 is above l2
+  if (l1.y >= max(l2.y + l2.h - 2)) return false; // l1 is below l2
+  // l1.y + l1.y > 0 排除掉y为0时的场景
+  if (l1.y + l2.y > 0 && l1.y > l2.y && l1.y <= max(l2.y + l2.h - 2)) return false; // l1 is above l2
+  if (l1.y + l2.y > 0 && l2.y > l1.y && l2.y <= max(l1.y + l1.h - 2)) return false; // l1 is above l2
+  return true;
+}
+
+type CollidesFn = (l1: LayoutItem, l2: LayoutItem) => boolean;
+
+export function getAllCollisions(
+  layouts: LayoutItem[],
+  layoutItem: LayoutItem,
+  collidesFn: CollidesFn = collides
+): LayoutItem[] {
+  return layouts.filter((l) => collidesFn(l, layoutItem));
 }
 
 /**
@@ -411,7 +433,8 @@ export function moveElement(
       : false;
   // $FlowIgnore acceptable modification of read-only array as it was recently cloned
   if (movingUp) sorted = sorted.reverse();
-  const collisions = getAllCollisions(sorted, l);
+
+  const collisions = getAllCollisions(sorted, l, collidesForDrag);
   const hasCollisions = collisions.length > 0;
 
   if (hasCollisions && preventCollision) {

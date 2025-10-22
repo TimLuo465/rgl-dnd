@@ -30,7 +30,7 @@ const Droppable: React.FC<DroppableProps> = (props) => {
         const itemType = monitor.getItemType() as string;
         const clientOffset = monitor.getClientOffset();
         if (monitor.isOver({ shallow: true })) {
-          onHover?.(item, offset, itemType, clientOffset);
+          onHover?.(item, clientOffset, itemType, offset);
         }
       },
       collect: (monitor) => {
