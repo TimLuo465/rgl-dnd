@@ -299,7 +299,7 @@ export function compactItem(
     // This is here because the layout must be sorted in order to get the correct bottom `y`.
     l.y = Math.min(bottom(compareWith), l.y);
     // Move the element up as far as it can go without colliding.
-    while (l.y > 0 && !getFirstCollision(compareWith, l)) {
+    while (l.y > 0 && !getFirstCollision(compareWith, { ...l, y: Math.floor(l.y)})) {
       l.y--;
     }
   } else if (compactH) {
