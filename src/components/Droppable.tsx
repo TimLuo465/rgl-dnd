@@ -25,11 +25,24 @@ const Droppable: React.FC<DroppableProps> = (props) => {
           onDrop?.(item, itemType);
         }
       },
-      hover: (item, monitor) => {
-        const offset = monitor.getSourceClientOffset();
+      hover: (item: any, monitor) => {
+        let clientOffset = monitor.getClientOffset();
+        let offset = monitor.getSourceClientOffset();
         const itemType = monitor.getItemType() as string;
-        const clientOffset = monitor.getClientOffset();
+
         if (monitor.isOver({ shallow: true })) {
+          if (item.dragOffset) {
+            const { x, y } = item.dragOffset;
+
+            clientOffset = {
+              x: clientOffset.x - x,
+              y: clientOffset.y - y,
+            };
+            offset = {
+              x: offset.x + x,
+              y: offset.y + y,
+            };
+          }
           onHover?.(item, clientOffset, itemType, offset);
         }
       },

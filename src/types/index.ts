@@ -103,6 +103,8 @@ export type Position = {
 export interface DraggableProps {
   type?: string;
   data?: DragItem;
+  /** 是否开启拖动时的偏移量计算，默认false */
+  dragOffset?: boolean;
   style?: CSSProperties;
   children?: ReactNode;
   draggable?: boolean;

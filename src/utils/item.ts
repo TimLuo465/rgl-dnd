@@ -28,3 +28,18 @@ export function getWH(item: LayoutItem, positionParams: PositionParams, leftSpac
     h: clamp(h, minH, maxH),
   };
 }
+
+export function getDragOffset() {
+  const e = window.event as DragEvent;
+
+  if (!e) return { x: 0, y: 0 };
+
+  const { pageX, pageY, target } = e;
+  const targetEl = target as HTMLElement;
+  const { left, top } = targetEl.getBoundingClientRect();
+
+  return {
+    x: pageX - left,
+    y: pageY - top,
+  };
+}

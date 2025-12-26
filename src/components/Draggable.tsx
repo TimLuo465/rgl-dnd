@@ -2,6 +2,7 @@ import React, { isValidElement, memo, ReactElement, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
 import { DEFAULT_ITEMTYPE } from '../constants';
 import { DraggableProps, DragItem } from '../types';
+import { getDragOffset } from '../utils';
 import event from './event';
 
 const Draggable: React.FC<DraggableProps> = memo((props) => {
@@ -9,6 +10,7 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
     type = DEFAULT_ITEMTYPE,
     style,
     data,
+    dragOffset,
     draggable = true,
     children,
     onDragEnd,
@@ -21,6 +23,14 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
       canDrag: draggable,
       item() {
         onDragStart?.(data);
+
+        if (dragOffset) {
+          return {
+            ...data,
+            dragOffset: getDragOffset(),
+          };
+        }
+
         return data;
       },
       end(draggedItem: DragItem, monitor) {

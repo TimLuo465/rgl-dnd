@@ -806,6 +806,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       return (
         <Item
           key={l.i}
+          dragOffset
           type={this.group}
           leftSpacing={calcLeftSpacing(layouts, item)}
           data={getLayoutItem(layouts, l.i) || getLayoutItem(_layouts, l.i)}

@@ -7,6 +7,7 @@ const FlowLayoutItem: React.FC<FlowLayoutItemProps> = React.memo((props) => {
 
   return (
     <Draggable
+      dragOffset
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       draggable={draggable && data.draggable !== false}
