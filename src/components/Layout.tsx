@@ -580,7 +580,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     const isDrop = !isEqual([layoutItem], [item]);
 
     if (this.isGroupItem(itemType)) {
-      this.handleLayoutsChange(cloneLayouts(this.oldLayouts));
+      this.handleLayoutsChange(layouts);
 
       // onDrop中已经有处理，且还会用到相关的属性
       // 所以这里不处理
@@ -590,7 +590,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     }
 
     if (isDrop) {
-      this.onDrop(item, itemType);
+      this.onDrop(layoutItem, itemType);
     }
   };
 
