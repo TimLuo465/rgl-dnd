@@ -659,6 +659,18 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   onResize = (item: LayoutItem, w: number, h: number, direction: string) => {
     const { layouts } = this;
     const { cols, compactType, preventCollision, rowHeight, margin } = this.props;
+
+    if (['n', 's'].includes(direction) && this.engine.snapline) {
+      this.engine.snapline.reize(
+        { w, h },
+        { positionParams: this.getPositionParams(), onResize: this.onResize }
+      );
+    }
+
+    if (!this.engine.snapline.canResize) {
+      return;
+    }
+
     const [newLayouts, l] = withLayoutItem(layouts, item.i, (l) => {
       // Something like quad tree should be used
       // to find collisions faster
@@ -700,13 +712,6 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       return;
     }
 
-    if (['n', 's'].includes(direction) && this.engine.snapline) {
-      this.engine.snapline.reize(
-        { w, h },
-        { positionParams: this.getPositionParams(), onResize: this.onResize }
-      );
-    }
-
     // Re-compact the newLayout and set the drag placeholder.
     this.handleLayoutsChange(compact(newLayouts, compactType, cols), {
       isDragging: false,
@@ -732,16 +737,16 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       return l;
     });
 
-    const newLayouts = compact(layouts, compactType, cols);
-
-    if (!isEqual(newLayouts, layouts)) {
-      this.handleLayoutsChange(newLayouts);
-    }
-
     this.placeholderRef.current.updatePlaceholder(null);
 
     if (['n', 's'].includes(direction) && this.engine.snapline) {
       this.engine.snapline.resizeStop();
+    }
+
+    const newLayouts = compact(layouts, compactType, cols);
+
+    if (!isEqual(newLayouts, layouts)) {
+      this.handleLayoutsChange(newLayouts);
     }
 
     this.onLayoutMaybeChanged(newLayouts, this.oldLayouts);

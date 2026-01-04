@@ -26,6 +26,9 @@ export default class SnapLine {
 
   setResizing: SetResizing;
 
+  // 如果继续拖拽的距离小于10px, 就不继续拖拽，自动对齐组件后，鼠标不松开会导致继续拖拽
+  canResize = true;
+
   constructor({ snaplineRef }) {
     this.snaplineRef = snaplineRef;
   }
@@ -65,6 +68,8 @@ export default class SnapLine {
 
     let minX = x;
     let maxX = x + w;
+
+    this.canResize = true;
 
     // 获取当前组件向上下拖拽时，能够对的layouts
     this.layouts = layouts
@@ -112,8 +117,8 @@ export default class SnapLine {
 
         const lastItemHeight = calcGridItemWHPx(lastItem.h + lastItem.y, rowHeight, margin[1]);
 
-        // 判断最临近Item 跟 现在拖拽Item 的高度差，如果小于等于15px，显示吸附线
-        if (Math.abs(height - lastItemHeight) <= 15) {
+        // 判断最临近Item 跟 现在拖拽Item 的高度差，如果小于等于30px，显示吸附线
+        if (Math.abs(height - lastItemHeight) <= 4) {
           const newH = (lastItemHeight + margin[1]) / (rowHeight + margin[1]) - this.resizeItem.y;
           const colWidth = calcGridColWidth(positionParams);
 
@@ -140,6 +145,7 @@ export default class SnapLine {
 
           onResize(this.resizeItem, w, newH, direction);
 
+          this.canResize = false;
           this.preSnapLayoutHeight = lastItemHeight;
 
           return;
@@ -149,9 +155,10 @@ export default class SnapLine {
       if (this.preSnapLayoutHeight) {
         height = height || calcGridItemWHPx(h + this.resizeItem.y, rowHeight, margin[1]);
 
-        if (Math.abs(height - this.preSnapLayoutHeight) >= 10) {
+        if (Math.abs(height - this.preSnapLayoutHeight) >= 2) {
           this.snaplineRef.current.updateSnapLine(null);
           this.preSnapLayoutHeight = 0;
+          this.canResize = true;
         }
       }
     }
@@ -161,5 +168,6 @@ export default class SnapLine {
     // 更新吸附线样式
     this.snaplineRef.current.updateSnapLine(null);
     this.preSnapLayoutHeight = 0;
+    this.canResize = true;
   }
 }
