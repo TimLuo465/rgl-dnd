@@ -108,6 +108,7 @@ export interface DraggableProps {
   style?: CSSProperties;
   children?: ReactNode;
   draggable?: boolean;
+  connectDrag?(item: DragItem, drag: ConnectDragSource): void;
   onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;
   onDragStart?: (draggedItem: DragItem) => void;
 }
@@ -156,6 +157,7 @@ export interface FlowLayoutProps extends React.Attributes {
   allowOutBoundedDrop?: boolean;
   isEmpty?: boolean;
   empty: React.ReactNode;
+  collectDrag?: (item: DragItem, drag: ConnectDragSource) => void;
   onDrop?: (layoutItem: LayoutItem | null, item: LayoutItem, itemType: string) => void;
   onHover?: (item: LayoutItem, itemType: string) => void;
   onDragStart?: (draggedItem: DragItem) => void;
@@ -174,6 +176,7 @@ export interface FlowLayoutItemProps {
   children?: ReactNode;
   draggable?: boolean;
   onDragStart?: (draggedItem: DragItem) => void;
+  connectDrag?: (item: DragItem, drag: ConnectDragSource) => void;
   onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;
 }
 

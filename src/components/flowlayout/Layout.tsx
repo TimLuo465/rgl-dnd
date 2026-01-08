@@ -50,6 +50,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
     allowOutBoundedDrop = true,
     isEmpty = false,
     empty,
+    collectDrag,
     onDrop,
     onHover,
     onDragStart,
@@ -228,6 +229,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
           data={item}
           type={DEFAULT_FLOW_LAYOUT}
           draggable={itemDraggable}
+          connectDrag={collectDrag}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >

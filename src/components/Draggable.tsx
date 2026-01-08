@@ -13,11 +13,12 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
     dragOffset,
     draggable = true,
     children,
+    connectDrag,
     onDragEnd,
     onDragStart,
   } = props;
 
-  const [collected, drag, dragPreview] = useDrag(
+  const [, drag, dragPreview] = useDrag(
     () => ({
       type,
       canDrag: draggable,
@@ -51,8 +52,13 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
   );
 
   useEffect(() => {
+    connectDrag?.(data, drag);
+  }, []);
+
+  useEffect(() => {
     const { selector = '.custom-drag-layer' } = data;
     const el = document.querySelector(selector);
+
     if (el) {
       dragPreview(el, { offsetX: 0, offsetY: 0 });
     }
