@@ -46,7 +46,7 @@ export default class Engine {
       return;
     }
 
-    const viewportArea = this.calcScrollArea(positionParams);
+    let viewportArea: number[] | null = null;
 
     layouts.forEach((l) => {
       if (this.draggingItem?.i === l.i) {
@@ -54,6 +54,19 @@ export default class Engine {
 
         this.prevLayouts[i] = { x, y, w, h };
         return;
+      }
+
+      const layoutDom = this.getLayoutDom(l) as HTMLElement;
+
+      if (!layoutDom) return;
+
+      const prevLayout = this.prevLayouts[l.i];
+      const hasPoisitonChanged = isLayoutChange(prevLayout, l);
+
+      if (!hasPoisitonChanged) return;
+
+      if (!viewportArea) {
+        viewportArea = this.calcScrollArea(positionParams);
       }
 
       this.updateLayoutItemPosition(l, positionParams, viewportArea);
@@ -115,15 +128,8 @@ export default class Engine {
     const layoutDom = this.getLayoutDom(layout) as HTMLElement;
     const prevLayout = this.prevLayouts[layout.i];
     const prevLayoutArea = prevLayout ? [prevLayout.y, prevLayout.y + prevLayout.h] : [-1, -1];
-    const hasPoisitonChanged = isLayoutChange(prevLayout, layout);
 
-    if (
-      !layoutDom ||
-      !hasPoisitonChanged ||
-      (hasPoisitonChanged &&
-        !isIntersect(layoutArea, viewportArea) &&
-        !isIntersect(prevLayoutArea, viewportArea))
-    ) {
+    if (!isIntersect(layoutArea, viewportArea) && !isIntersect(prevLayoutArea, viewportArea)) {
       return;
     }
 
@@ -139,7 +145,9 @@ export default class Engine {
       .join(';')};`;
 
     // card外有一层data-i的容器，所以这里取parentElement
-    layoutDom.setAttribute('style', layoutDomCssText + styleCssText);
+    requestAnimationFrame(() => {
+      layoutDom.setAttribute('style', layoutDomCssText + styleCssText);
+    });
   }
 
   private calcScrollArea(positionParams: PositionParams) {
