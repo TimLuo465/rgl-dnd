@@ -216,6 +216,11 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       }
 
       const height = el.clientHeight;
+
+      if (!height) {
+        return;
+      }
+
       const positionParams = this.getPositionParams();
       const h = calcH(positionParams, height, item.y);
       const oldLayout = this.layouts.find((l) => l.i === item.i);
