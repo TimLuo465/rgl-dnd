@@ -9,6 +9,7 @@ export const prefixCls = prefix;
 export const DEFAULT_GROUP = `${prefix}-group`;
 export const DEFAULT_ITEMTYPE = `${prefix}-card`;
 export const DEFAULT_FLOW_LAYOUT = `${prefix}-flow-layout`;
+export const DEFAULT_POSITION_LAYOUT = `${prefix}-position-layout`;
 export const DEFAULT_DROPPINGITEM = {
   i: '__dropping-elem__',
   h: 1,

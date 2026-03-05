@@ -1,5 +1,6 @@
 import React, { isValidElement, memo, ReactElement, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
+import { getEmptyImage } from 'react-dnd-html5-backend';
 import { DEFAULT_ITEMTYPE } from '../constants';
 import { DraggableProps, DragItem } from '../types';
 import { getDragOffset } from '../utils';
@@ -10,9 +11,9 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
     type = DEFAULT_ITEMTYPE,
     style,
     data,
-    dragOffset,
     draggable = true,
     children,
+    useDragPreview = true,
     connectDrag,
     onDragEnd,
     onDragStart,
@@ -25,14 +26,13 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
       item() {
         onDragStart?.(data);
 
-        if (dragOffset) {
-          return {
-            ...data,
+        return {
+          ...data,
+          extra: {
+            el: window.event.target as HTMLElement,
             dragOffset: getDragOffset(),
-          };
-        }
-
-        return data;
+          },
+        };
       },
       end(draggedItem: DragItem, monitor) {
         const didDrop = monitor.didDrop();
@@ -56,13 +56,18 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
   }, []);
 
   useEffect(() => {
+    if (!useDragPreview) {
+      dragPreview(getEmptyImage(), { captureDraggingState: true });
+      return;
+    }
+
     const { selector = '.custom-drag-layer' } = data;
     const el = document.querySelector(selector);
 
     if (el) {
       dragPreview(el, { offsetX: 0, offsetY: 0 });
     }
-  }, [data]);
+  }, [data, useDragPreview]);
 
   if (typeof children === 'string') {
     return (

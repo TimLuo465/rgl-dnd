@@ -11,6 +11,7 @@ import {
   DEFAULT_ITEMTYPE,
   DEFAULT_MARGIN,
   DEFAULT_MAXROWS,
+  DEFAULT_POSITION_LAYOUT,
   DEFAULT_ROWHEIGHT,
   prefixCls,
 } from '../constants';
@@ -64,7 +65,7 @@ let groupIndex = 0;
 let hoveredGroups = [];
 
 class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
-  isHoverFlowLayout = false;
+  isHoverOtherLayout = false;
 
   group = '';
 
@@ -111,10 +112,12 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     groupIndex += 1;
     // cache the layout instance for mutli group
     groupLayouts[this.group] = this;
-    groupKeys = Object.keys(groupLayouts);
-    groupKeys.push(DEFAULT_ITEMTYPE);
-    // 流式容器默认group
-    groupKeys.push(DEFAULT_FLOW_LAYOUT);
+    groupKeys = [
+      ...Object.keys(groupLayouts),
+      DEFAULT_ITEMTYPE,
+      DEFAULT_FLOW_LAYOUT,
+      DEFAULT_POSITION_LAYOUT,
+    ];
 
     // use default group
     if (!group) {
@@ -174,8 +177,8 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     this.mounted = true;
     window.addEventListener('resize', this.resize);
     event.on('dragEnd.cardItem', this.onCardItemDragEnd);
-    event.on('hover.flowLayout', this.onFlowLayoutHover);
-    event.on('drop.flowLayout', this.onFlowLayoutDrop);
+    event.on('hover.otherLayout', this.onOtherLayoutHover);
+    event.on('drop.otherLayout', this.onOtherLayoutDrop);
     this.onLayoutMaybeChanged(this.layouts, this.props.layouts, false);
     this.event.emit('mounted');
   }
@@ -196,8 +199,8 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     delete groupLayouts[this.group];
     window.removeEventListener('resize', this.resize);
     event.off('dragEnd.cardItem', this.onCardItemDragEnd);
-    event.off('hover.flowLayout', this.onFlowLayoutHover);
-    event.off('drop.flowLayout', this.onFlowLayoutDrop);
+    event.off('hover.otherLayout', this.onOtherLayoutHover);
+    event.off('drop.otherLayout', this.onOtherLayoutDrop);
   }
 
   getScrollbarContainer = () => {
@@ -239,9 +242,9 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     }, 50);
   }
 
-  onFlowLayoutHover = (itemType: string) => {
-    if (this.isHoverFlowLayout) return;
-    this.isHoverFlowLayout = true;
+  onOtherLayoutHover = (itemType: string) => {
+    if (this.isHoverOtherLayout) return;
+    this.isHoverOtherLayout = true;
 
     if (this.draggingItem) {
       // 移入流式容器时候，隐藏占位符
@@ -253,14 +256,14 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     }
   };
 
-  onFlowLayoutDrop = (layoutItem: LayoutItem | null, itemType: string) => {
+  onOtherLayoutDrop = (layoutItem: LayoutItem | null, itemType: string) => {
     // 流式容器drop的时候，清空状态
     const { draggingItem } = this;
     if (layoutItem) {
       this.resetDraggingState(layoutItem.i);
     } else if (draggingItem) {
       this.resetDraggingState(draggingItem.i);
-      if (![DEFAULT_FLOW_LAYOUT, DEFAULT_ITEMTYPE].includes(itemType)) {
+      if (![DEFAULT_FLOW_LAYOUT, DEFAULT_ITEMTYPE, DEFAULT_POSITION_LAYOUT].includes(itemType)) {
         // 如果是网格布局中的组件拖入到流式布局，那么原有网格布局中的组件在hover的时候需要隐藏
         setComDisplay(draggingItem.i, 'block');
       }
@@ -371,9 +374,9 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   };
 
   hover = (item: DragItem, offset: XYCoord, itemType: string) => {
-    if (this.isHoverFlowLayout) {
+    if (this.isHoverOtherLayout) {
       event.emit('hover.layout');
-      this.isHoverFlowLayout = false;
+      this.isHoverOtherLayout = false;
     }
 
     const { layouts } = this;
@@ -628,7 +631,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       // 判断是否是新增以及是否允许超出边界拖入
       if (allowOutBoundedDrop) {
         const isDrop = !this.oldLayouts.find((layout) => layout.i === draggingItem.i);
-        if (isDrop && !this.isHoverFlowLayout) {
+        if (isDrop && !this.isHoverOtherLayout) {
           this.onDrop(item, itemType);
         } else {
           this.oldLayouts = cloneLayouts(layouts);
@@ -657,7 +660,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     } else {
       // drop on layout, but not emit onDrop
       // maybe nested layout, so trigger onDrop manual
-      !this.isHoverFlowLayout && this.onDrop(item, itemType);
+      !this.isHoverOtherLayout && this.onDrop(item, itemType);
     }
   };
 
@@ -816,7 +819,6 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       return (
         <Item
           key={l.i}
-          dragOffset
           type={this.group}
           leftSpacing={calcLeftSpacing(layouts, item)}
           data={getLayoutItem(layouts, l.i) || getLayoutItem(_layouts, l.i)}

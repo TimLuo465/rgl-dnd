@@ -105,7 +105,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
   // drop时，更新layouts
   const handleDrop = useEvent((dragItem: LayoutItem, itemType: string) => {
     if (!canDrop) {
-      event.emit('drop.flowLayout', null, itemType);
+      event.emit('drop.otherLayout', null, itemType);
       onDrop(null, dragItem, itemType);
       return;
     }
@@ -115,7 +115,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
 
     const newLayoutItem = JSON.parse(JSON.stringify(layoutItem));
     const itemIndex = newLayoutItem.children?.findIndex((i: string) => i === draggingItem.i);
-    event.emit('drop.flowLayout', draggingItem, itemType);
+    event.emit('drop.otherLayout', draggingItem, itemType);
 
     // 新拖入的组件，或者是从其他其他容器内拖入的情况
     if (itemType === DEFAULT_ITEMTYPE || (itemIndex && itemIndex === -1)) {
@@ -160,7 +160,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
         setIndicatorPosition(position);
       }
 
-      event.emit('hover.flowLayout', itemType);
+      event.emit('hover.otherLayout', itemType);
       onHover?.(item, itemType);
     }
   );
@@ -196,7 +196,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
           resetIndicator();
         }
       } else {
-        event.emit('drop.flowLayout', null, itemType);
+        event.emit('drop.otherLayout', null, itemType);
       }
     } else {
       resetIndicator();
