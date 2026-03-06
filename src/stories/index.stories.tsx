@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  DEFAULT_FLOW_LAYOUT,
   DEFAULT_GROUP,
   DEFAULT_POSITION_LAYOUT,
   Draggable,
@@ -98,6 +99,46 @@ export const Default: React.FC = () => {
     return layoutMap.current[i];
   };
 
+  const sanitizeLayoutItem = (item: LayoutItem, clearParent = false): LayoutItem => {
+    const nextItem = { ...item };
+    delete nextItem.extra;
+    if (clearParent) {
+      delete nextItem.pId;
+    }
+    return nextItem;
+  };
+
+  const upsertLayoutItem = (targetLayouts: LayoutItem[], item: LayoutItem) => {
+    const index = targetLayouts.findIndex((l) => l.i === item.i);
+    if (index > -1) {
+      targetLayouts[index] = item;
+    } else {
+      targetLayouts.push(item);
+    }
+    layoutMap.current[item.i] = item;
+    return index;
+  };
+
+  const removeChildFromParent = (
+    targetLayouts: LayoutItem[],
+    parentId: string | undefined,
+    childId: string
+  ) => {
+    if (!parentId) return;
+
+    const pIndex = targetLayouts.findIndex((l) => l.i === parentId);
+    if (pIndex < 0) return;
+
+    const parent = targetLayouts[pIndex];
+    const nextParent = {
+      ...parent,
+      children: (parent.children || []).filter((id) => id !== childId),
+    };
+
+    targetLayouts[pIndex] = nextParent;
+    layoutMap.current[parentId] = nextParent;
+  };
+
   const droppingItem = {
     i: UUID(),
     w: 3,
@@ -174,14 +215,20 @@ export const Default: React.FC = () => {
 
   const Box: React.FC<BoxProps> = (props) => {
     const { item, drag } = props;
+    const boxRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-      const el = document.querySelector(`div[data-id=${item.i}]`);
-      drag?.(el);
-    }, []);
+      if (boxRef.current) {
+        drag?.(boxRef.current);
+      }
+    }, [drag, item.i]);
 
     return (
-      <div data-id={item} style={{ border: '1px solid #ddd', height: '100%', minHeight: '80px' }}>
+      <div
+        ref={boxRef}
+        data-id={item.i}
+        style={{ border: '1px solid #ddd', height: '100%', minHeight: '80px' }}
+      >
         <div>子组件：</div>
         <div>{item.i.substring(1, 5)}</div>
       </div>
@@ -189,11 +236,11 @@ export const Default: React.FC = () => {
   };
 
   const renderFlowLayoutItem = (item) => {
-    return <Box item={item} data-flow={item} key={item}></Box>;
+    return <Box item={item} data-flow={item} key={item.i}></Box>;
   };
 
   const renderPositionLayoutItem = (item) => {
-    return <Box item={item} data-position={item} key={item}></Box>;
+    return <Box item={item} data-position={item} key={item.i}></Box>;
   };
 
   const EmptyContainer: React.FC = () => {
@@ -222,6 +269,28 @@ export const Default: React.FC = () => {
         }
         return item;
       });
+      setLayouts(newLayouts);
+    },
+    [layouts]
+  );
+
+  const syncTopLevelLayouts = useCallback(
+    (_layouts: LayoutItem[]) => {
+      const newLayouts = cloneLayouts(layouts);
+
+      _layouts.forEach((layout) => {
+        const current = newLayouts.find((l) => l.i === layout.i);
+        const merged = sanitizeLayoutItem(
+          {
+            ...(current || layout),
+            ...layout,
+            children: current?.children ?? layout.children,
+          },
+          true
+        );
+        upsertLayoutItem(newLayouts, merged);
+      });
+
       setLayouts(newLayouts);
     },
     [layouts]
@@ -269,55 +338,115 @@ export const Default: React.FC = () => {
   const onPositionLayoutDrop = (
     layoutItem: LayoutItem,
     draggingItem: LayoutItem,
-    itemType: string
+    _itemType: string
   ) => {
     const newLayouts = cloneLayouts(layouts);
+    const currDraggingItem = newLayouts.find((l) => l.i === draggingItem.i);
+    const sourceParentId = currDraggingItem?.pId || draggingItem.pId;
+    const nextDraggingItem = sanitizeLayoutItem({
+      ...(currDraggingItem || draggingItem),
+      ...draggingItem,
+      pId: layoutItem.i,
+    });
 
-    if (itemType.indexOf(DEFAULT_POSITION_LAYOUT) !== 0) {
-      draggingItem.pId = layoutItem.i;
+    upsertLayoutItem(newLayouts, nextDraggingItem);
 
-      if (itemType.indexOf(DEFAULT_GROUP) === 0) {
-        const dragIndex = newLayouts.findIndex((l) => l.i === draggingItem.i);
-
-        newLayouts.splice(dragIndex, 1);
-      }
-
-      const index = newLayouts.findIndex((l) => l.i === layoutItem.i);
-
-      if (index > -1) {
-        newLayouts[index] = {
-          ...layoutItem,
-          children: [...layoutItem.children, draggingItem.i],
-        };
-        layoutMap.current[layoutItem.i] = newLayouts[index];
-      }
+    if (sourceParentId && sourceParentId !== layoutItem.i) {
+      removeChildFromParent(newLayouts, sourceParentId, draggingItem.i);
     }
-    layoutMap.current[draggingItem.i] = draggingItem;
+
+    const index = newLayouts.findIndex((l) => l.i === layoutItem.i);
+    if (index > -1) {
+      const targetParent = newLayouts[index] || layoutItem;
+      const children = targetParent.children || [];
+      const hasDraggingItem = children.includes(draggingItem.i);
+
+      newLayouts[index] = {
+        ...targetParent,
+        children: hasDraggingItem ? children : [...children, draggingItem.i],
+      };
+      layoutMap.current[layoutItem.i] = newLayouts[index];
+    }
+
+    layoutMap.current[draggingItem.i] = nextDraggingItem;
     setLayouts(newLayouts);
   };
 
   const onFlowLayoutDrop = (layoutItem: any, draggingItem: any, itemType: string) => {
     const newLayouts = cloneLayouts(layouts);
+    const isGridSource = itemType.indexOf(DEFAULT_GROUP) === 0;
+    const isPositionSource = itemType.indexOf(DEFAULT_POSITION_LAYOUT) === 0;
 
-    if (itemType.indexOf(DEFAULT_GROUP) === 0) {
+    if (isGridSource || isPositionSource) {
       const item = newLayouts.find((l) => l.i === draggingItem.i);
       const pIndex = newLayouts.findIndex((l) => l.i === layoutItem.i);
+      const parentId = item?.pId || draggingItem.pId;
 
       if (item) {
-        item.pId = layoutItem.i;
-        Object.assign(item, draggingItem);
+        const nextItem = sanitizeLayoutItem(
+          {
+            ...item,
+            ...draggingItem,
+            pId: layoutItem.i,
+          },
+          false
+        );
+        upsertLayoutItem(newLayouts, nextItem);
+      }
+
+      if (isPositionSource && parentId) {
+        removeChildFromParent(newLayouts, parentId, draggingItem.i);
       }
 
       if (pIndex > -1) {
         newLayouts[pIndex] = layoutItem;
+        layoutMap.current[layoutItem.i] = layoutItem;
       }
     }
 
     setLayouts(newLayouts);
   };
 
-  const onLayoutDrop = (_layouts) => {
-    setLayouts(_layouts.slice());
+  const onLayoutDrop = (_layouts, droppedItem: LayoutItem, dragInfo: { type: string }) => {
+    const isPositionSource = dragInfo?.type.indexOf(DEFAULT_POSITION_LAYOUT) === 0;
+    const isFlowSource = dragInfo?.type.indexOf(DEFAULT_FLOW_LAYOUT) === 0;
+
+    if (isPositionSource || isFlowSource) {
+      const newLayouts = cloneLayouts(layouts);
+      const dragIndex = newLayouts.findIndex((l) => l.i === droppedItem.i);
+      const parentId = newLayouts[dragIndex]?.pId || droppedItem.pId;
+
+      // Sync all top-level grid items with the final drop result to avoid post-drop reflow mismatch.
+      _layouts.forEach((layout) => {
+        const current = newLayouts.find((l) => l.i === layout.i);
+        const merged = sanitizeLayoutItem(
+          {
+            ...(current || layout),
+            ...layout,
+            children: current?.children ?? layout.children,
+          },
+          true
+        );
+        upsertLayoutItem(newLayouts, merged);
+      });
+
+      removeChildFromParent(newLayouts, parentId, droppedItem.i);
+
+      const currentDroppedItem = newLayouts.find((l) => l.i === droppedItem.i);
+      const mergedDroppedItem = sanitizeLayoutItem(
+        {
+          ...(currentDroppedItem || droppedItem),
+          ...droppedItem,
+        },
+        true
+      );
+      upsertLayoutItem(newLayouts, mergedDroppedItem);
+
+      setLayouts(newLayouts);
+      return;
+    }
+
+    syncTopLevelLayouts(_layouts.slice());
   };
 
   const onDragStartBox = () => {
@@ -353,7 +482,7 @@ export const Default: React.FC = () => {
           margin={[10, 10]}
           containerPadding={[0, 0]}
           onDrop={onLayoutDrop}
-          onLayoutChange={setLayouts}
+          onLayoutChange={syncTopLevelLayouts}
         >
           {layouts.filter((item) => !item.pId).map((item) => renderItem(item))}
         </Layout>

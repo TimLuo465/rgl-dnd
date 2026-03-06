@@ -20,9 +20,11 @@ import {
   calcH,
   calcLayoutByProps,
   calcLeftSpacing,
+  calcWH,
   calcXY,
   cloneLayouts,
   compact,
+  DragSourceVisibilityController,
   getAllCollisions,
   getContainerHeight,
   getLayoutItem,
@@ -94,6 +96,8 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
 
   /** dragging position */
   prevPosition: XYCoord | null = null;
+
+  dragSourceVisibility = new DragSourceVisibilityController();
 
   offset: DOMRect | null = null;
 
@@ -196,6 +200,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   }
 
   componentWillUnmount() {
+    this.dragSourceVisibility.restore();
     delete groupLayouts[this.group];
     window.removeEventListener('resize', this.resize);
     event.off('dragEnd.cardItem', this.onCardItemDragEnd);
@@ -395,7 +400,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       layoutItem = this.moveGroupItem(item, offset, itemType);
     } else {
       // move card item
-      layoutItem = this.moveCardItem(item, offset);
+      layoutItem = this.moveCardItem(item, offset, itemType);
     }
 
     if (layoutItem) {
@@ -453,21 +458,40 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   /**
    * move card item not in group layout
    */
-  moveCardItem(item: DragItem, offset: XYCoord): LayoutItem | null {
+  moveCardItem(item: DragItem, offset: XYCoord, itemType: string): LayoutItem | null {
     const { droppingItem } = this.props;
     const { draggingItem, layouts, engine } = this;
     let layoutItem: LayoutItem;
+
+    if (itemType === DEFAULT_POSITION_LAYOUT) {
+      this.dragSourceVisibility.hide(item);
+    }
 
     if (!draggingItem) {
       if (!droppingItem) {
         return null;
       }
 
-      const _item: any = {
-        ...item,
-        ...droppingItem,
-        i: item.i || droppingItem.i,
-      };
+      let _item: any;
+      if (itemType === DEFAULT_POSITION_LAYOUT) {
+        const positionParams = this.getPositionParams();
+        const width = Number.isFinite(item.w) ? item.w : droppingItem.w;
+        const height = Number.isFinite(item.h) ? item.h : droppingItem.h;
+        const { w, h } = calcWH(positionParams, width, height, 0, 0, 0);
+
+        _item = {
+          ...item,
+          i: item.i || droppingItem.i,
+          w: Math.max(Math.round(w), 1),
+          h: Math.max(Math.round(h), 1),
+        };
+      } else {
+        _item = {
+          ...item,
+          ...droppingItem,
+          i: item.i || droppingItem.i,
+        };
+      }
 
       layoutItem = {
         ..._item,
@@ -611,6 +635,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   };
 
   resetDraggingState(i: string) {
+    this.dragSourceVisibility.restore();
     hoveredGroups = [];
 
     this.draggingItem = null;

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { XYCoord } from 'react-dnd';
 import { ResizeCallbackData } from 'react-resizable';
-import { DEFAULT_POSITION_LAYOUT, prefixCls } from '../../constants';
+import { DEFAULT_ITEMTYPE, DEFAULT_POSITION_LAYOUT, prefixCls } from '../../constants';
 import { LayoutItem, PositionLayoutProps } from '../../types';
 import { checkArray } from '../../utils';
 import { plus } from '../../utils/number-precision';
@@ -81,7 +81,12 @@ const PositionLayout: React.FC<PositionLayoutProps> = (props) => {
     } else {
       dragCore.calcBounds();
       dragCore.calcSnapRects(el.parentElement);
-      calcRect(offset, dragCore.bounds, el.parentElement);
+      const useElementSize = !(
+        itemType === DEFAULT_ITEMTYPE &&
+        !Number.isFinite(item.w) &&
+        !Number.isFinite(item.h)
+      );
+      calcRect(offset, dragCore.bounds, el.parentElement, useElementSize);
 
       const { x: bx, y: by } = dragCore.bounds;
       const itemRect = getPlaceholderRect();

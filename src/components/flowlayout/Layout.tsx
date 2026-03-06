@@ -1,8 +1,14 @@
 import React, { memo, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { XYCoord } from 'react-dnd';
-import { DEFAULT_FLOW_LAYOUT, DEFAULT_ITEMTYPE, prefixCls } from '../../constants';
+import {
+  DEFAULT_FLOW_LAYOUT,
+  DEFAULT_ITEMTYPE,
+  DEFAULT_POSITION_LAYOUT,
+  prefixCls,
+} from '../../constants';
 import { DragItem, FlowLayoutProps, LayoutItem, indicatorInfo } from '../../types';
 import {
+  DragSourceVisibilityController,
   UUID,
   checkArray,
   findPosition,
@@ -59,6 +65,15 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
   } = props;
 
   const containerRef = useRef<HTMLDivElement>();
+  const dragSourceVisibility = useRef(new DragSourceVisibilityController());
+
+  const hideDragSource = useEvent((item: DragItem) => {
+    dragSourceVisibility.current.hide(item);
+  });
+
+  const restoreHiddenDragSource = useEvent(() => {
+    dragSourceVisibility.current.restore();
+  });
 
   // 设置指示线位置
   const setIndicatorPosition = useEvent(({ height, left, top, width }) => {
@@ -151,6 +166,9 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
     (item: LayoutItem, offset: XYCoord, itemType: string, clientOffset: XYCoord) => {
       // 如果当前正在拖动的组件，就是当前容器，那么不触发hover事件
       if (item.i === layoutItem.i) return;
+      if (itemType === DEFAULT_POSITION_LAYOUT) {
+        hideDragSource(item);
+      }
 
       if (checkArray(layoutItem.children) && !isEmpty) {
         const targetNodes: any[] = Array.from(containerRef.current.children);
@@ -201,6 +219,8 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
     } else {
       resetIndicator();
     }
+
+    restoreHiddenDragSource();
   });
 
   useEffect(() => {
@@ -212,6 +232,7 @@ const FlowLayout: React.FC<FlowLayoutProps> = memo((props, ref) => {
     return () => {
       event.off('dragEnd.cardItem', handleCardDragEnd);
       event.off('hover.layout', resetIndicator);
+      restoreHiddenDragSource();
     };
   }, []);
 

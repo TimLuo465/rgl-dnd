@@ -18,13 +18,34 @@ export function renderPlaceholder() {
 let cachedRect: BoundingBox | null = null;
 let placeholderEl: HTMLElement | null = null;
 
-export function calcRect(position: XYCoord, bounds: BoundingBox, el?: HTMLElement) {
+function getElementSize(el?: HTMLElement) {
+  if (!el) return null;
+
+  const rect = el.getBoundingClientRect();
+  const width = rect.width || el.offsetWidth || parseFloat(el.style.width || '0');
+  const height = rect.height || el.offsetHeight || parseFloat(el.style.height || '0');
+
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return null;
+  }
+
+  return { width, height };
+}
+
+export function calcRect(
+  position: XYCoord,
+  bounds: BoundingBox,
+  el?: HTMLElement,
+  useElementSize = true
+) {
   if (!cachedRect) {
+    const size = useElementSize ? getElementSize(el) : null;
+
     cachedRect = {
       x: 0,
       y: 0,
-      width: parseFloat(el?.style.width || '100'),
-      height: parseFloat(el?.style.height || '50'),
+      width: size?.width || parseFloat(el?.style.width || '100'),
+      height: size?.height || parseFloat(el?.style.height || '50'),
     };
   }
 
