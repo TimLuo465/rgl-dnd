@@ -699,7 +699,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     const { cols, compactType, preventCollision, rowHeight, margin } = this.props;
 
     if (['n', 's'].includes(direction) && this.engine.snapline) {
-      this.engine.snapline.reize(
+      this.engine.snapline.resize(
         { w, h },
         { positionParams: this.getPositionParams(), onResize: this.onResize }
       );
