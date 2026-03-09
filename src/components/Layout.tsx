@@ -80,6 +80,8 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   /** The lastest parent node with scrollbar */
   scrollbar: HTMLElement | null = null;
 
+  containerObserver: { disconnect: () => void } | null = null;
+
   // 调整成组件属性，onDragStart 时不再触发组件更新
   oldLayouts: LayoutItem[] | null;
 
@@ -178,8 +180,11 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       this.resize();
     }
 
+    if (this.containerRef.current) {
+      this.containerObserver = observeDom(this.containerRef.current, this.resize);
+    }
+
     this.mounted = true;
-    window.addEventListener('resize', this.resize);
     event.on('dragEnd.cardItem', this.onCardItemDragEnd);
     event.on('hover.otherLayout', this.onOtherLayoutHover);
     event.on('drop.otherLayout', this.onOtherLayoutDrop);
@@ -202,7 +207,8 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   componentWillUnmount() {
     this.dragSourceVisibility.restore();
     delete groupLayouts[this.group];
-    window.removeEventListener('resize', this.resize);
+    this.containerObserver?.disconnect();
+    this.containerObserver = null;
     event.off('dragEnd.cardItem', this.onCardItemDragEnd);
     event.off('hover.otherLayout', this.onOtherLayoutHover);
     event.off('drop.otherLayout', this.onOtherLayoutDrop);
