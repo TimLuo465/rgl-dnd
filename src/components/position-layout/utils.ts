@@ -1,5 +1,5 @@
-import { XYCoord } from 'react-dnd';
 import { DEFAULT_GROUP, prefixCls } from '../../constants';
+import { XYCoord } from '../../types';
 import { BoundingBox } from './types';
 
 const placeholderClsName = `${prefixCls}-position-placeholder`;

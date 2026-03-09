@@ -5,6 +5,7 @@ import { prefixCls } from '../../constants';
 import { PositionLayoutItemProps } from '../../types';
 import { minus, plus } from '../../utils/number-precision';
 import Draggable from '../Draggable';
+import { normalizeZIndex } from './z-index';
 
 const PositionLayoutItem: React.FC<PositionLayoutItemProps> = React.memo((props) => {
   const {
@@ -24,6 +25,7 @@ const PositionLayoutItem: React.FC<PositionLayoutItemProps> = React.memo((props)
     transform: `translate(${data.x}px, ${data.y}px)`,
     width: `${data.w}px`,
     height: `${data.h}px`,
+    zIndex: normalizeZIndex(data.zIndex),
   };
   const boxRef = useRef(null);
   const stateRef = useRef({

@@ -159,41 +159,78 @@ import { FlowLayout } from 'rgl-dnd';
 
 ### PositionLayout（`PositionLayout`）
 
-`PositionLayout` 是绝对定位容器，支持自由拖动、8 向缩放、吸附线对齐。
-
-> 当前版本未从 `rgl-dnd` 根入口导出 `PositionLayout`，请使用深层路径导入。
+`PositionLayout` 是绝对定位容器，支持自由拖动、8 向缩放、吸附线对齐，以及 zIndex 层级管理。
 
 ### 使用约束
 
 - 容器 item 同样需要维护 `children: string[]`。
 - 子节点需提供 `data-position={layoutItem}`。
+- 子节点建议维护 `zIndex`（正整数，最小值为 `1`）。
 - 组件内部会渲染占位元素到 `document.body`，用于拖拽预览与吸附。
 
 ### 示例
 
 ```tsx
-import PositionLayout from 'rgl-dnd/dist/components/position-layout/Layout';
+import React, { useRef, useState } from 'react';
+import { LayoutItem, PositionLayout, PositionLayoutRef } from 'rgl-dnd';
 
-<div data-grid={positionContainer}>
-  <PositionLayout
-    layoutItem={positionContainer}
-    empty={<div style={{ minHeight: 80 }}>请拖入组件</div>}
-    onDrop={(targetContainer, draggingItem, itemType) => {
-      // 1) 将 draggingItem 的 x/y/w/h 写回全局状态
-      // 2) 将 draggingItem 归属到 targetContainer.children
-      // 3) 若来自其他容器，移除旧父容器中的 child id
-    }}
-    onResizeStop={(item) => {
-      // 将缩放后的 x/y/w/h 持久化
-    }}
-  >
-    {positionChildren.map((child) => (
-      <div key={child.i} data-position={child}>
-        {child.i}
-      </div>
-    ))}
-  </PositionLayout>
-</div>;
+function Demo() {
+  const [layouts, setLayouts] = useState<LayoutItem[]>([]);
+  const [activeId] = useState<string>('');
+  const positionLayoutRef = useRef<PositionLayoutRef | null>(null);
+  const positionContainer = {} as LayoutItem;
+  const positionChildren: LayoutItem[] = [];
+
+  const mergeChangedItems = (changedItems: LayoutItem[]) => {
+    if (!changedItems.length) return;
+
+    const changedMap = changedItems.reduce((map, item) => {
+      map[item.i] = item;
+      return map;
+    }, {} as Record<string, LayoutItem>);
+
+    setLayouts((prev) =>
+      prev.map((item) => {
+        const changed = changedMap[item.i];
+        return changed ? { ...item, ...changed } : item;
+      })
+    );
+  };
+
+  return (
+    <div data-grid={positionContainer}>
+      <PositionLayout
+        ref={positionLayoutRef}
+        layoutItem={positionContainer}
+        empty={<div style={{ minHeight: 80 }}>请拖入组件</div>}
+        onDrop={(targetContainer, draggingItem, itemType) => {
+          // 1) 将 draggingItem 的 x/y/w/h/zIndex 写回全局状态
+          // 2) 将 draggingItem 归属到 targetContainer.children
+          // 3) 若来自其他容器，移除旧父容器中的 child id
+          // 4) 新拖入元素默认位于当前容器顶层（max zIndex + 1）
+        }}
+        onResizeStop={(item) => {
+          // 将缩放后的 x/y/w/h 持久化
+        }}
+        onZIndexChange={(changedItems) => {
+          // changedItems 是本次层级操作后所有受影响元素（批量）
+          mergeChangedItems(changedItems);
+        }}
+      >
+        {positionChildren.map((child) => (
+          <div key={child.i} data-position={child}>
+            {child.i}
+          </div>
+        ))}
+      </PositionLayout>
+
+      <button onClick={() => positionLayoutRef.current?.bringForward(activeId)}>上移一层</button>
+      <button onClick={() => positionLayoutRef.current?.sendBackward(activeId)}>下移一层</button>
+      <button onClick={() => positionLayoutRef.current?.bringToFront(activeId)}>置于顶层</button>
+      <button onClick={() => positionLayoutRef.current?.sendToBack(activeId)}>置于底层</button>
+    </div>
+  );
+}
 ```
 
 ### 常用 Props
@@ -207,6 +244,24 @@ import PositionLayout from 'rgl-dnd/dist/components/position-layout/Layout';
 | `className` | `string` | `''` | 容器 className。 |
 | `onDrop` | `(layoutItem, item, itemType) => void` | - | drop 回调（失败时 `layoutItem` 为 `null`）。 |
 | `onResizeStop` | `(item) => void` | - | 子项缩放结束回调。 |
+| `onZIndexChange` | `(changedItems: LayoutItem[]) => void` | - | 层级变化回调，返回本次受影响的全部元素（已归一化）。 |
+
+### Ref 方法（层级操作）
+
+`PositionLayout` 通过 ref 暴露层级方法：
+
+| 方法 | 参数 | 说明 |
+| --- | --- | --- |
+| `bringForward` | `(itemId: string)` | 上移一层（与上方相邻层交换）。 |
+| `sendBackward` | `(itemId: string)` | 下移一层（与下方相邻层交换）。 |
+| `bringToFront` | `(itemId: string)` | 置于顶层。 |
+| `sendToBack` | `(itemId: string)` | 置于底层。 |
+
+层级动作规则补充：
+
+- 每次操作后，容器内子项 `zIndex` 会归一化为连续区间 `1..N`。
+- 不会出现重复层级值。
+- 已在顶层/底层时继续执行对应动作，不会产生变更。
 
 ## 数据结构建议
 
@@ -215,12 +270,13 @@ import PositionLayout from 'rgl-dnd/dist/components/position-layout/Layout';
 - 顶层 Grid 容器：`!item.pId`
 - Flow/Position 容器：通过 `children: string[]` 关联子项
 - 子项：通过 `pId`（自定义字段）记录父容器 id，便于跨容器迁移
+- PositionLayout 子项：额外维护 `zIndex`，用于层级控制
 
 这样可以统一处理：
 
 - 顶层网格排序（`onLayoutChange`）
 - 容器内顺序变更（`FlowLayout.onDrop`）
-- 绝对定位坐标更新（`PositionLayout.onDrop / onResizeStop`）
+- 绝对定位坐标与层级更新（`PositionLayout.onDrop / onResizeStop / onZIndexChange`）
 
 ## 类型定义
 

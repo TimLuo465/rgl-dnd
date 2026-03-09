@@ -1,9 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { XYCoord } from 'react-dnd';
+import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { ResizeCallbackData } from 'react-resizable';
 import { DEFAULT_ITEMTYPE, DEFAULT_POSITION_LAYOUT, prefixCls } from '../../constants';
-import { LayoutItem, PositionLayoutProps } from '../../types';
-import { checkArray } from '../../utils';
+import { LayoutItem, PositionLayoutProps, PositionLayoutRef, XYCoord } from '../../types';
+import { checkArray, useEvent } from '../../utils';
 import { plus } from '../../utils/number-precision';
 import Droppable from '../Droppable';
 import event from '../event';
@@ -21,12 +20,37 @@ import {
   renderPlaceholder,
   resetPlaceholder,
 } from './utils';
+import {
+  applyZIndexAction,
+  getDefaultDroppedZIndex,
+  normalizeZIndex,
+  normalizeZIndexLayouts,
+  ZIndexAction,
+} from './z-index';
 
 type TransformOpts = SnapOptions & {
   itemRect?: BoundingBox;
 };
 
-const PositionLayout: React.FC<PositionLayoutProps> = (props) => {
+const getPositionChildren = (children: React.ReactNode): LayoutItem[] => {
+  const items: LayoutItem[] = [];
+
+  React.Children.forEach(children, (child: React.ReactElement) => {
+    if (!React.isValidElement(child)) {
+      return;
+    }
+
+    const item = child.props['data-position'];
+
+    if (item) {
+      items.push(item);
+    }
+  });
+
+  return items;
+};
+
+const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>((props, ref) => {
   const {
     layoutItem,
     className = '',
@@ -37,6 +61,7 @@ const PositionLayout: React.FC<PositionLayoutProps> = (props) => {
     children,
     onDrop,
     onResizeStop,
+    onZIndexChange,
   } = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -52,6 +77,27 @@ const PositionLayout: React.FC<PositionLayoutProps> = (props) => {
     dragCore.reset();
     resetPlaceholder();
   }, []);
+
+  const moveLayer = useEvent((itemId: string, action: ZIndexAction) => {
+    const positionChildren = getPositionChildren(children);
+    // 规则层返回的是“所有受影响元素”的新层级，保证外部可一次性同步。
+    const changedItems = applyZIndexAction(positionChildren, itemId, action);
+
+    if (!changedItems || !changedItems.length) return;
+
+    onZIndexChange?.(changedItems);
+  });
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      bringForward: (itemId: string) => moveLayer(itemId, 'forward'),
+      sendBackward: (itemId: string) => moveLayer(itemId, 'backward'),
+      bringToFront: (itemId: string) => moveLayer(itemId, 'front'),
+      sendToBack: (itemId: string) => moveLayer(itemId, 'back'),
+    }),
+    [moveLayer]
+  );
 
   const transformItem = (el: HTMLElement, offset: XYCoord, opts?: TransformOpts) => {
     dragCore.calcBounds();
@@ -112,12 +158,24 @@ const PositionLayout: React.FC<PositionLayoutProps> = (props) => {
     if (draggingItem.i === layoutItem.i) return;
 
     const rect = getPlaceholderRect();
+    if (!rect) return;
+
+    const positionChildren = getPositionChildren(children);
+    const layoutChildren = layoutItem.children || [];
+    const hasDraggingItem = layoutChildren.includes(draggingItem.i);
+    // 已有元素再次拖入当前容器时，先做一次归一化，再读取其稳定层级。
+    const normalizedChildren = normalizeZIndexLayouts(positionChildren);
+    const normalizedDraggingItem = normalizedChildren.find((item) => item.i === draggingItem.i);
     const newDraggingItem = {
       ...draggingItem,
       x: rect.x,
       y: rect.y,
       w: rect.width,
       h: rect.height,
+      // 新拖入元素始终插入顶层；已有元素保留当前（归一化后）层级。
+      zIndex: hasDraggingItem
+        ? normalizeZIndex(normalizedDraggingItem?.zIndex ?? draggingItem.zIndex)
+        : getDefaultDroppedZIndex(positionChildren),
     };
 
     delete newDraggingItem.extra;
@@ -171,7 +229,7 @@ const PositionLayout: React.FC<PositionLayoutProps> = (props) => {
       return empty;
     }
 
-    return React.Children.map(children, (child: React.ReactElement, i) => {
+    return React.Children.map(children, (child: React.ReactElement) => {
       if (!child) return null;
 
       const item = child.props['data-position'];
@@ -215,6 +273,8 @@ const PositionLayout: React.FC<PositionLayoutProps> = (props) => {
       </div>
     </Droppable>
   );
-};
+});
+
+PositionLayout.displayName = 'PositionLayout';
 
 export default PositionLayout;

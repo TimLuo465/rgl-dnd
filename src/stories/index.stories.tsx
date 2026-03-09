@@ -9,7 +9,8 @@ import {
   Provider,
 } from '..';
 import PositionLayout from '../components/position-layout/Layout';
-import { LayoutItem } from '../types';
+import { normalizeZIndexLayouts } from '../components/position-layout/z-index';
+import { LayoutItem, PositionLayoutRef } from '../types';
 import { checkArray, cloneLayouts, UUID } from '../utils';
 import './index.less';
 
@@ -63,6 +64,7 @@ const mockLayouts = [
     y: 0,
     w: 300,
     h: 150,
+    zIndex: 1,
     selected: false,
   },
   {
@@ -72,6 +74,7 @@ const mockLayouts = [
     y: 0,
     w: 400,
     h: 120,
+    zIndex: 2,
     selected: false,
   },
 ];
@@ -79,6 +82,11 @@ const mockLayouts = [
 export const Default: React.FC = () => {
   const [layouts, _setLayouts] = useState<LayoutItem[]>(mockLayouts);
   const [isDropContainer, setIsDropContainer] = useState<boolean>(false);
+  const [activePositionItem, setActivePositionItem] = useState<{
+    parentId: string;
+    itemId: string;
+  } | null>(null);
+  const positionLayoutRefMap = useRef<{ [key: string]: PositionLayoutRef | null }>({});
   const defaultLayoutMap = useMemo(() => {
     return mockLayouts.reduce((prev, cur) => {
       prev[cur.i] = cur;
@@ -139,6 +147,106 @@ export const Default: React.FC = () => {
     layoutMap.current[parentId] = nextParent;
   };
 
+  const normalizePositionChildrenZIndex = (targetLayouts: LayoutItem[], parentId: string) => {
+    const parentIndex = targetLayouts.findIndex((item) => item.i === parentId);
+    if (parentIndex < 0) return;
+
+    const parent = targetLayouts[parentIndex];
+    const childIds = parent.children || [];
+    if (!checkArray(childIds)) return;
+
+    const childItems = childIds
+      .map((childId) => targetLayouts.find((layout) => layout.i === childId))
+      .filter(Boolean) as LayoutItem[];
+    const normalizedChildren = normalizeZIndexLayouts(childItems);
+    const normalizedMap = normalizedChildren.reduce((map, item) => {
+      map[item.i] = item;
+      return map;
+    }, {} as { [key: string]: LayoutItem });
+
+    targetLayouts.forEach((layout, index) => {
+      const normalized = normalizedMap[layout.i];
+
+      if (!normalized) return;
+
+      const nextLayout = sanitizeLayoutItem(
+        {
+          ...layout,
+          ...normalized,
+        },
+        false
+      );
+
+      targetLayouts[index] = nextLayout;
+      layoutMap.current[layout.i] = nextLayout;
+    });
+  };
+
+  const setPositionLayoutRef = (layoutId: string, ref: PositionLayoutRef | null) => {
+    if (!ref) {
+      delete positionLayoutRefMap.current[layoutId];
+      return;
+    }
+
+    positionLayoutRefMap.current[layoutId] = ref;
+  };
+
+  const onPositionLayoutZIndexChange = (changedItems: LayoutItem[]) => {
+    if (!checkArray(changedItems)) return;
+
+    const newLayouts = cloneLayouts(layouts);
+    const changedMap = changedItems.reduce((map, item) => {
+      map[item.i] = item;
+      return map;
+    }, {} as { [key: string]: LayoutItem });
+
+    newLayouts.forEach((item, index) => {
+      const changed = changedMap[item.i];
+
+      if (!changed) return;
+
+      const nextItem = sanitizeLayoutItem(
+        {
+          ...item,
+          ...changed,
+        },
+        false
+      );
+
+      newLayouts[index] = nextItem;
+      layoutMap.current[item.i] = nextItem;
+    });
+
+    setLayouts(newLayouts);
+  };
+
+  const triggerPositionZIndexAction = (action: keyof PositionLayoutRef) => {
+    if (!activePositionItem) return;
+
+    const { parentId, itemId } = activePositionItem;
+    const layoutRef = positionLayoutRefMap.current[parentId];
+
+    layoutRef?.[action]?.(itemId);
+  };
+
+  const selectPositionItem = (item: LayoutItem) => {
+    if (!item.pId) return;
+
+    setActivePositionItem({
+      parentId: item.pId,
+      itemId: item.i,
+    });
+  };
+
+  useEffect(() => {
+    if (!activePositionItem) return;
+
+    const activeItem = layouts.find((l) => l.i === activePositionItem.itemId);
+    if (!activeItem || activeItem.pId !== activePositionItem.parentId) {
+      setActivePositionItem(null);
+    }
+  }, [layouts, activePositionItem]);
+
   const droppingItem = {
     i: UUID(),
     w: 3,
@@ -195,10 +303,12 @@ export const Default: React.FC = () => {
         return (
           <div data-position={item} key={item.i}>
             <PositionLayout
+              ref={(ref) => setPositionLayoutRef(item.i, ref)}
               layoutItem={item}
               onDrop={onPositionLayoutDrop}
               empty={EmptyContainer}
               onResizeStop={onResizeStop}
+              onZIndexChange={onPositionLayoutZIndexChange}
             >
               {renderPositionLayout(item.children)}
             </PositionLayout>
@@ -214,7 +324,7 @@ export const Default: React.FC = () => {
   };
 
   const Box: React.FC<BoxProps> = (props) => {
-    const { item, drag } = props;
+    const { item, drag, onClick, isActive = false } = props;
     const boxRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -227,10 +337,17 @@ export const Default: React.FC = () => {
       <div
         ref={boxRef}
         data-id={item.i}
-        style={{ border: '1px solid #ddd', height: '100%', minHeight: '80px' }}
+        onClick={onClick}
+        style={{
+          border: isActive ? '2px solid #0470c1' : '1px solid #ddd',
+          cursor: onClick ? 'pointer' : 'default',
+          height: '100%',
+          minHeight: '80px',
+        }}
       >
         <div>子组件：</div>
         <div>{item.i.substring(1, 5)}</div>
+        <div>层级：{Number.isFinite(item.zIndex) ? item.zIndex : '-'}</div>
       </div>
     );
   };
@@ -240,7 +357,15 @@ export const Default: React.FC = () => {
   };
 
   const renderPositionLayoutItem = (item) => {
-    return <Box item={item} data-position={item} key={item.i}></Box>;
+    return (
+      <Box
+        item={item}
+        data-position={item}
+        key={item.i}
+        onClick={() => selectPositionItem(item)}
+        isActive={activePositionItem?.itemId === item.i}
+      ></Box>
+    );
   };
 
   const EmptyContainer: React.FC = () => {
@@ -296,44 +421,43 @@ export const Default: React.FC = () => {
     [layouts]
   );
 
-  const renderItem = useCallback(
-    (item) => {
-      if (item.flow) {
-        return (
-          <div data-grid={item} key={item.i} data-i={item.i}>
-            <FlowLayout
-              layoutItem={item}
-              empty={<EmptyContainer />}
-              onDrop={onFlowLayoutDrop}
-              onLayoutChange={onLayoutChange}
-            >
-              {renderFlowLayout(item.children.map((i) => getLayoutItem(i)))}
-            </FlowLayout>
-          </div>
-        );
-      }
-      if (item.position) {
-        return (
-          <div data-grid={item} data-id={item.i} key={item.i}>
-            <PositionLayout
-              layoutItem={item}
-              empty={<EmptyContainer />}
-              onDrop={onPositionLayoutDrop}
-              onResizeStop={onResizeStop}
-            >
-              {renderPositionLayout(item.children.map((i) => getLayoutItem(i)))}
-            </PositionLayout>
-          </div>
-        );
-      }
+  const renderItem = (item) => {
+    if (item.flow) {
       return (
-        <div data-grid={item} data-id={item.i} key={item.i}>
-          {item.i.substring(1, 5)}
+        <div data-grid={item} key={item.i} data-i={item.i}>
+          <FlowLayout
+            layoutItem={item}
+            empty={<EmptyContainer />}
+            onDrop={onFlowLayoutDrop}
+            onLayoutChange={onLayoutChange}
+          >
+            {renderFlowLayout(item.children.map((i) => getLayoutItem(i)))}
+          </FlowLayout>
         </div>
       );
-    },
-    [layouts]
-  );
+    }
+    if (item.position) {
+      return (
+        <div data-grid={item} data-id={item.i} key={item.i}>
+          <PositionLayout
+            ref={(ref) => setPositionLayoutRef(item.i, ref)}
+            layoutItem={item}
+            empty={<EmptyContainer />}
+            onDrop={onPositionLayoutDrop}
+            onResizeStop={onResizeStop}
+            onZIndexChange={onPositionLayoutZIndexChange}
+          >
+            {renderPositionLayout(item.children.map((i) => getLayoutItem(i)))}
+          </PositionLayout>
+        </div>
+      );
+    }
+    return (
+      <div data-grid={item} data-id={item.i} key={item.i}>
+        {item.i.substring(1, 5)}
+      </div>
+    );
+  };
 
   const onPositionLayoutDrop = (
     layoutItem: LayoutItem,
@@ -368,7 +492,11 @@ export const Default: React.FC = () => {
       layoutMap.current[layoutItem.i] = newLayouts[index];
     }
 
-    layoutMap.current[draggingItem.i] = nextDraggingItem;
+    normalizePositionChildrenZIndex(newLayouts, layoutItem.i);
+    const normalizedDraggingItem = newLayouts.find((item) => item.i === draggingItem.i);
+    if (normalizedDraggingItem) {
+      layoutMap.current[draggingItem.i] = normalizedDraggingItem;
+    }
     setLayouts(newLayouts);
   };
 
@@ -471,6 +599,39 @@ export const Default: React.FC = () => {
         >
           绝对定位容器
         </Draggable>
+      </div>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+        <button
+          type="button"
+          disabled={!activePositionItem}
+          onClick={() => triggerPositionZIndexAction('bringForward')}
+        >
+          上移一层
+        </button>
+        <button
+          type="button"
+          disabled={!activePositionItem}
+          onClick={() => triggerPositionZIndexAction('sendBackward')}
+        >
+          下移一层
+        </button>
+        <button
+          type="button"
+          disabled={!activePositionItem}
+          onClick={() => triggerPositionZIndexAction('bringToFront')}
+        >
+          置于顶层
+        </button>
+        <button
+          type="button"
+          disabled={!activePositionItem}
+          onClick={() => triggerPositionZIndexAction('sendToBack')}
+        >
+          置于底层
+        </button>
+        <span style={{ lineHeight: '32px', color: '#666' }}>
+          {activePositionItem ? `当前选中：${activePositionItem.itemId.substring(1, 5)}` : '请先点击绝对定位子组件'}
+        </span>
       </div>
       <div id="grid-layout">
         <Layout

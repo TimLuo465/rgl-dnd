@@ -1,7 +1,6 @@
 import EventEmitter from 'eventemitter3';
 import debounce from 'lodash.debounce';
 import React, { CSSProperties } from 'react';
-import { XYCoord } from 'react-dnd';
 import {
   DEFAULT_COLS,
   DEFAULT_CONTAINER_PADDING,
@@ -15,7 +14,7 @@ import {
   DEFAULT_ROWHEIGHT,
   prefixCls,
 } from '../constants';
-import { DragItem, InternalEventType, LayoutItem, LayoutProps, Size } from '../types';
+import { DragItem, InternalEventType, LayoutItem, LayoutProps, Size, XYCoord } from '../types';
 import {
   calcH,
   calcLayoutByProps,
