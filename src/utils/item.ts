@@ -29,17 +29,31 @@ export function getWH(item: LayoutItem, positionParams: PositionParams, leftSpac
   };
 }
 
-export function getDragOffset() {
-  const e = window.event as DragEvent;
+/**
+ * 获取拖拽时的偏移量，按照鼠标拖拽时的位置来进行位置变动
+ * @returns
+ */
+export function getDragOffset(sourceEl?: HTMLElement | null, event?: MouseEvent | DragEvent) {
+  const e =
+    event ||
+    ((typeof window !== 'undefined' ? (window.event as MouseEvent | DragEvent | undefined) : null) ||
+      null);
+  const targetEl = sourceEl || ((e?.target as HTMLElement) || null);
 
-  if (!e) return { x: 0, y: 0 };
+  if (!targetEl || !e) {
+    return { x: 0, y: 0 };
+  }
 
-  const { pageX, pageY, target } = e;
-  const targetEl = target as HTMLElement;
+  const pageX = Number.isFinite((e as MouseEvent).pageX)
+    ? (e as MouseEvent).pageX
+    : (e as MouseEvent).clientX + window.scrollX;
+  const pageY = Number.isFinite((e as MouseEvent).pageY)
+    ? (e as MouseEvent).pageY
+    : (e as MouseEvent).clientY + window.scrollY;
   const { left, top } = targetEl.getBoundingClientRect();
 
   return {
-    x: pageX - left,
-    y: pageY - top,
+    x: pageX - (left + window.scrollX),
+    y: pageY - (top + window.scrollY),
   };
 }

@@ -12,7 +12,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "cross-env NODE_ENV=production && rollup -c",
+    "build": "cross-env NODE_ENV=production rollup -c && node scripts/postbuild-sync.js",
     "storybook": "start-storybook -p 6006",
     "build-storybook": "build-storybook"
   },

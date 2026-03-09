@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "sourceDir": "dist",
+  "targetDir": "D:/work/weapp/weapp-designer/node_modules/rgl-dnd/dist",
+  "cleanTargetBeforeCopy": true
+}

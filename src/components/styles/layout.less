@@ -11,7 +11,8 @@
     height: auto;
   }
 
-  &-placeholder {
+  &-placeholder,
+  &-position-placeholder {
     background-color: #e2e8ed;
   }
 
@@ -37,6 +38,25 @@
       width: 100%;
       height: 100%;
     }
+  }
+
+  &-position-layout {
+    height: 100%;
+  }
+
+  &-position-layout-item.react-resizable {
+    position: absolute;
+    overflow: hidden;
+  }
+
+  &-position-placeholder {
+    position: absolute;
+    pointer-events: none;
+    width: 100px;
+    height: 50px;
+    left: 0;
+    top: 0;
+    display: none;
   }
 }
 
