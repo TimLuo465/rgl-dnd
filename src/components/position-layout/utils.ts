@@ -1,4 +1,4 @@
-import { DEFAULT_GROUP, prefixCls } from '../../constants';
+import { prefixCls } from '../../constants';
 import { XYCoord } from '../../types';
 import { BoundingBox } from './types';
 
@@ -18,35 +18,17 @@ export function renderPlaceholder() {
 let cachedRect: BoundingBox | null = null;
 let placeholderEl: HTMLElement | null = null;
 
-function getElementSize(el?: HTMLElement) {
-  if (!el) return null;
-
-  const rect = el.getBoundingClientRect();
-  const width = rect.width || el.offsetWidth || parseFloat(el.style.width || '0');
-  const height = rect.height || el.offsetHeight || parseFloat(el.style.height || '0');
-
-  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-    return null;
-  }
-
-  return { width, height };
-}
-
 export function calcRect(
   position: XYCoord,
   bounds: BoundingBox,
-  el?: HTMLElement,
-  useElementSize = true,
-  preferredSize?: { width: number; height: number } | null
+  size?: { width: number; height: number } | null
 ) {
   if (!cachedRect) {
-    const size = preferredSize || (useElementSize ? getElementSize(el) : null);
-
     cachedRect = {
       x: 0,
       y: 0,
-      width: size?.width || parseFloat(el?.style.width || '100'),
-      height: size?.height || parseFloat(el?.style.height || '50'),
+      width: size?.width || 100,
+      height: size?.height || 50,
     };
   }
 
@@ -106,13 +88,6 @@ export function resetPlaceholder() {
 
   placeholderEl.removeAttribute('style');
   placeholderEl = null;
-}
-
-export function getDraggingEl(el: HTMLElement, itemType: string) {
-  if (itemType.indexOf(DEFAULT_GROUP) === 0) {
-    return el.parentElement;
-  }
-  return el;
 }
 
 export function uniqueNumbers(numbers: number[]) {

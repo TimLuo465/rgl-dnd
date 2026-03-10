@@ -1,4 +1,9 @@
-import { DEFAULT_ITEMTYPE, DEFAULT_POSITION_LAYOUT } from '../constants';
+import {
+  DEFAULT_FLOW_LAYOUT,
+  DEFAULT_GROUP,
+  DEFAULT_ITEMTYPE,
+  DEFAULT_POSITION_LAYOUT,
+} from '../constants';
 import { DragItem, DroppingItem, PositionParams } from '../types';
 import { calcGridItemPosition, calcWH } from './calculate';
 
@@ -68,12 +73,16 @@ function getDraggingGridSizeByType(
   droppingItem: DroppingItem | undefined,
   positionParams: PositionParams
 ): GridSize | null {
-  if (itemType === DEFAULT_ITEMTYPE) {
+  if (itemType === DEFAULT_ITEMTYPE || itemType === DEFAULT_FLOW_LAYOUT) {
     return getGridSizeFromDroppingItem(droppingItem);
   }
 
   if (itemType === DEFAULT_POSITION_LAYOUT) {
     return calcDraggingItemGridSize(item, droppingItem, positionParams);
+  }
+
+  if (itemType?.indexOf(DEFAULT_GROUP) === 0) {
+    return getGridSizeFromDragItem(item) || getGridSizeFromDroppingItem(droppingItem);
   }
 
   return getGridSizeFromDragItem(item) || getGridSizeFromDroppingItem(droppingItem);
