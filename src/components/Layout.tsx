@@ -19,7 +19,6 @@ import {
   calcH,
   calcLayoutByProps,
   calcLeftSpacing,
-  calcWH,
   calcXY,
   cloneLayouts,
   compact,
@@ -36,10 +35,11 @@ import {
   setComDisplay,
   withLayoutItem,
 } from '../utils';
+import { calcDraggingItemGridSize, calcDraggingItemPixelSize } from '../utils/layout-size';
 import Droppable from './Droppable';
 import Engine from './Engine';
 import Item from './Item';
-import { layoutContext, layoutStore } from './LayoutContext';
+import { layoutContext, LayoutRuntimeApi, layoutStore } from './LayoutContext';
 import Placeholder, { PlaceholderRef } from './Placeholder';
 import ResizeSnapLine, { ResizeSnapLineRef } from './ResizeSnapLine';
 import event from './event';
@@ -107,6 +107,8 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   static defaultProps: LayoutProps;
 
   static contextType = layoutContext;
+
+  context!: React.ContextType<typeof layoutContext>;
 
   constructor(props: LayoutProps) {
     super(props);
@@ -423,6 +425,18 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     return calcXY(positionParams, y, x, item.w, item.h);
   }
 
+  getDraggingItemGridSize(item: DragItem) {
+    return calcDraggingItemGridSize(item, this.props.droppingItem, this.getPositionParams());
+  }
+
+  getDraggingItemPixelSize = (item: DragItem, itemType?: string) => {
+    return calcDraggingItemPixelSize(item, itemType, this.props.droppingItem, this.getPositionParams());
+  };
+
+  getLayoutRuntimeApi = (): LayoutRuntimeApi => ({
+    getDraggingItemPixelSize: this.getDraggingItemPixelSize,
+  });
+
   moveItem(layoutItem: LayoutItem, offset: XYCoord) {
     // for dragging item has nested layout, the nested layout has unmounted
     if (!this.containerRef.current) {
@@ -479,16 +493,17 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
 
       let _item: any;
       if (itemType === DEFAULT_POSITION_LAYOUT) {
-        const positionParams = this.getPositionParams();
-        const width = Number.isFinite(item.w) ? item.w : droppingItem.w;
-        const height = Number.isFinite(item.h) ? item.h : droppingItem.h;
-        const { w, h } = calcWH(positionParams, width, height, 0, 0, 0);
+        const size = this.getDraggingItemGridSize(item);
+
+        if (!size) {
+          return null;
+        }
 
         _item = {
           ...item,
           i: item.i || droppingItem.i,
-          w: Math.max(Math.round(w), 1),
-          h: Math.max(Math.round(h), 1),
+          w: size.w,
+          h: size.h,
         };
       } else {
         _item = {
@@ -881,6 +896,11 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   }
 
   render() {
+    const parentContext = this.context || { groups: [], parentLayout: null };
+    const contextValue = {
+      ...parentContext,
+      parentLayout: this.getLayoutRuntimeApi(),
+    };
     const { accept } = this.state;
     const {
       style,
@@ -903,23 +923,25 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     };
 
     return (
-      <Droppable
-        weId={this.group}
-        group={this.group}
-        accept={accept}
-        scrollbarContainer={scrollbarContainer}
-        canDrop={droppable}
-        onDrop={this.onDrop}
-        onHover={this.hover}
-        onDragLeave={this.onDragLeave}
-        onDragEnter={this.onDragEnter}
-      >
-        <div ref={this.containerRef} className={clsNameStr} style={containerStyle}>
-          <Placeholder ref={this.placeholderRef} />
-          <ResizeSnapLine ref={this.snaplineRef} />
-          {this.renderItems()}
-        </div>
-      </Droppable>
+      <layoutContext.Provider value={contextValue}>
+        <Droppable
+          weId={this.group}
+          group={this.group}
+          accept={accept}
+          scrollbarContainer={scrollbarContainer}
+          canDrop={droppable}
+          onDrop={this.onDrop}
+          onHover={this.hover}
+          onDragLeave={this.onDragLeave}
+          onDragEnter={this.onDragEnter}
+        >
+          <div ref={this.containerRef} className={clsNameStr} style={containerStyle}>
+            <Placeholder ref={this.placeholderRef} />
+            <ResizeSnapLine ref={this.snaplineRef} />
+            {this.renderItems()}
+          </div>
+        </Droppable>
+      </layoutContext.Provider>
     );
   }
 }

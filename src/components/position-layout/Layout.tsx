@@ -14,6 +14,7 @@ import { calculateSnapAndGuides, SnapOptions } from './snap/utils';
 import { BoundingBox } from './types';
 import {
   calcRect,
+  getDraggingEl,
   getPlaceholderRect,
   moveItem,
   movePlaceholder,
@@ -124,31 +125,34 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
 
     if (itemType.indexOf(DEFAULT_POSITION_LAYOUT) === 0) {
       transformItem(el, offset);
-    } else {
-      dragCore.calcBounds();
-      dragCore.calcSnapRects(el.parentElement);
-      const useElementSize = !(
-        itemType === DEFAULT_ITEMTYPE &&
-        !Number.isFinite(item.w) &&
-        !Number.isFinite(item.h)
-      );
-      calcRect(offset, dragCore.bounds, el.parentElement, useElementSize);
-
-      const { x: bx, y: by } = dragCore.bounds;
-      const itemRect = getPlaceholderRect();
-      const { snappedRect, guides: newGuides } = calculateSnapAndGuides(
-        itemRect,
-        dragCore.snapRects
-      );
-
-      guidesRef.current?.setGuides(newGuides);
-
-      movePlaceholder(snappedRect, {
-        ...snappedRect,
-        x: snappedRect.x + bx,
-        y: snappedRect.y + by,
-      });
+      event.emit('hover.otherLayout', itemType);
+      return;
     }
+
+    const draggingEl = getDraggingEl(el, itemType);
+    const preferredSize =
+      itemType === DEFAULT_ITEMTYPE ? parentLayout?.getDraggingItemPixelSize(item, itemType) : null;
+
+    dragCore.calcBounds();
+    dragCore.calcSnapRects(draggingEl);
+    const useElementSize = !(
+      itemType === DEFAULT_ITEMTYPE &&
+      !Number.isFinite(item.w) &&
+      !Number.isFinite(item.h)
+    );
+    calcRect(offset, dragCore.bounds, draggingEl, useElementSize, preferredSize);
+
+    const { x: bx, y: by } = dragCore.bounds;
+    const itemRect = getPlaceholderRect();
+    const { snappedRect, guides: newGuides } = calculateSnapAndGuides(itemRect, dragCore.snapRects);
+
+    guidesRef.current?.setGuides(newGuides);
+
+    movePlaceholder(snappedRect, {
+      ...snappedRect,
+      x: snappedRect.x + bx,
+      y: snappedRect.y + by,
+    });
 
     event.emit('hover.otherLayout', itemType);
   };
@@ -251,7 +255,7 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
     });
   };
 
-  const { groups } = useLayoutContext();
+  const { groups, parentLayout } = useLayoutContext();
 
   useEffect(() => {
     dragCore.init(containerRef.current!);

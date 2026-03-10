@@ -1,6 +1,24 @@
 import React, { createContext, useCallback, useContext, useState } from 'react';
+import { DragItem } from '../types';
 
-export const layoutContext = createContext(null);
+type LayoutItemPixelSize = {
+  width: number;
+  height: number;
+};
+
+export type LayoutRuntimeApi = {
+  getDraggingItemPixelSize: (item: DragItem, itemType?: string) => LayoutItemPixelSize | null;
+};
+
+export type LayoutContextValue = {
+  groups: string[];
+  parentLayout: LayoutRuntimeApi | null;
+};
+
+export const layoutContext = createContext<LayoutContextValue>({
+  groups: [],
+  parentLayout: null,
+});
 const { Provider } = layoutContext;
 
 export function useLayoutContext() {
@@ -23,7 +41,7 @@ const LayoutProvider: React.FC = (props) => {
     setGroups(data);
   }, []);
 
-  return <Provider value={{ groups }}>{children}</Provider>;
+  return <Provider value={{ groups, parentLayout: null }}>{children}</Provider>;
 };
 
 export default LayoutProvider;

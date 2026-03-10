@@ -36,10 +36,11 @@ export function calcRect(
   position: XYCoord,
   bounds: BoundingBox,
   el?: HTMLElement,
-  useElementSize = true
+  useElementSize = true,
+  preferredSize?: { width: number; height: number } | null
 ) {
   if (!cachedRect) {
-    const size = useElementSize ? getElementSize(el) : null;
+    const size = preferredSize || (useElementSize ? getElementSize(el) : null);
 
     cachedRect = {
       x: 0,
