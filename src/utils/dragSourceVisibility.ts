@@ -67,7 +67,7 @@ export class DragSourceVisibilityController {
       return;
     }
 
-    this.hidden.el.style.display = this.hidden.prevDisplay;
+    this.hidden.el.style.display = '';
     this.hidden = null;
     this.activeSourceEl = null;
   }
