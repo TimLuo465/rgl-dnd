@@ -14,7 +14,9 @@ import { calculateSnapAndGuides, SnapOptions } from './snap/utils';
 import { BoundingBox } from './types';
 import {
   calcRect,
+  getDraggingEl,
   getPlaceholderRect,
+  initPlaceholderRect,
   moveItem,
   movePlaceholder,
   renderPlaceholder,
@@ -103,9 +105,8 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
   const transformItem = (el: HTMLElement, offset: XYCoord, opts?: TransformOpts) => {
     dragCore.calcBounds();
     dragCore.calcSnapRects(el);
-    const size = opts?.itemRect
-      ? { width: opts.itemRect.width, height: opts.itemRect.height }
-      : opts?.itemSize;
+    const size = opts?.itemRect || ({} as any);
+
     calcRect(offset, dragCore.bounds, size);
 
     const itemRect = opts?.itemRect || getPlaceholderRect();
@@ -131,26 +132,20 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
     return parentLayout?.getDraggingItemPixelSize(item, itemType);
   };
 
-  const getDraggingNode = (item: LayoutItem, itemType: string) => {
-    if (itemType.indexOf(DEFAULT_POSITION_LAYOUT) !== 0) {
-      return undefined;
-    }
-
-    const sourceEl = item?.extra?.el as HTMLElement | undefined;
-    if (!sourceEl) {
-      return undefined;
-    }
-
-    return (
-      (sourceEl.closest?.(`.${prefixCls}-position-layout-item`) as HTMLElement | null) || sourceEl
-    );
-  };
-
   const handleHover = (item: LayoutItem, offset: XYCoord, itemType: string) => {
     if (item.i === layoutItem.i) return;
 
+    const { el } = item.extra;
+    const draggingNode = getDraggingEl(el, itemType);
+
+    if (itemType.indexOf(DEFAULT_POSITION_LAYOUT) === 0) {
+      initPlaceholderRect(draggingNode);
+      transformItem(draggingNode, offset);
+      event.emit('hover.otherLayout', itemType);
+      return;
+    }
+
     const preferredSize = getHoverItemSize(item, itemType);
-    const draggingNode = getDraggingNode(item, itemType);
 
     dragCore.calcBounds();
     dragCore.calcSnapRects(draggingNode);

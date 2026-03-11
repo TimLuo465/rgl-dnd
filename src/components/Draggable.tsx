@@ -24,15 +24,17 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
       type,
       canDrag: draggable,
       item() {
-        onDragStart?.(data);
-
-        return {
+        const newData = {
           ...data,
           extra: {
             el: window.event.target as HTMLElement,
             dragOffset: getDragOffset(),
           },
         };
+
+        onDragStart?.(newData);
+
+        return newData;
       },
       end(draggedItem: DragItem, monitor) {
         const didDrop = monitor.didDrop();

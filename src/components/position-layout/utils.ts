@@ -1,4 +1,4 @@
-import { prefixCls } from '../../constants';
+import { DEFAULT_GROUP, prefixCls } from '../../constants';
 import { XYCoord } from '../../types';
 import { BoundingBox } from './types';
 
@@ -17,6 +17,30 @@ export function renderPlaceholder() {
 
 let cachedRect: BoundingBox | null = null;
 let placeholderEl: HTMLElement | null = null;
+
+/**
+ * 针对PositionLayout中子组件拖拽的场景
+ * 1. 初次拖拽时，根据子组件的实际宽高来获取
+ * 2. 后续将子组件拖入到GridLayout中后，再从GridLayout中来，中间会将cachedRect重置，此时需要从子组件的style中获取宽高
+ * @param el 子组件元素
+ */
+export function initPlaceholderRect(el: HTMLElement) {
+  if (cachedRect) return;
+
+  let { offsetWidth, offsetHeight } = el;
+
+  if (el.style.display === 'none') {
+    offsetWidth = parseInt(el.style.width || '0');
+    offsetHeight = parseInt(el.style.height || '0');
+  }
+
+  cachedRect = {
+    x: 0,
+    y: 0,
+    width: offsetWidth,
+    height: offsetHeight,
+  };
+}
 
 export function calcRect(
   position: XYCoord,
@@ -88,6 +112,13 @@ export function resetPlaceholder() {
 
   placeholderEl.removeAttribute('style');
   placeholderEl = null;
+}
+
+export function getDraggingEl(el: HTMLElement, itemType: string) {
+  if (itemType.indexOf(DEFAULT_GROUP) === 0) {
+    return el.parentElement;
+  }
+  return el;
 }
 
 export function uniqueNumbers(numbers: number[]) {
