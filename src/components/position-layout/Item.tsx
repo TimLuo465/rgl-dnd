@@ -1,11 +1,17 @@
-import React, { SyntheticEvent, useRef } from 'react';
+import React, { MouseEvent, SyntheticEvent, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { ResizableBox, ResizeCallbackData } from 'react-resizable';
+import { ResizableBox, ResizeCallbackData, ResizeHandle } from 'react-resizable';
 import { prefixCls } from '../../constants';
 import { PositionLayoutItemProps } from '../../types';
 import { minus, plus } from '../../utils/number-precision';
 import Draggable from '../Draggable';
 import { normalizeZIndex } from './z-index';
+
+const positionLayoutItemCls = `${prefixCls}-position-layout-item`;
+
+const handleEvent = (event: MouseEvent<HTMLSpanElement>) => {
+  event.stopPropagation();
+};
 
 const PositionLayoutItem: React.FC<PositionLayoutItemProps> = React.memo((props) => {
   const {
@@ -19,6 +25,8 @@ const PositionLayoutItem: React.FC<PositionLayoutItemProps> = React.memo((props)
     onDragEnd,
     onResize,
     onResizeStop,
+    onSelect,
+    selected = false,
   } = props;
 
   const style = {
@@ -107,12 +115,33 @@ const PositionLayoutItem: React.FC<PositionLayoutItemProps> = React.memo((props)
     onResizeStop?.(newData);
   };
 
+  const renderResizeHandle = (axis: ResizeHandle, ref: React.Ref<HTMLElement>) => {
+    if (!selected) return null;
+
+    return (
+      <span
+        ref={ref}
+        className={`react-resizable-handle-${axis} ${positionLayoutItemCls}-handle`}
+        data-position-layout-handle={axis}
+        data-axis={axis}
+        onClick={handleEvent}
+        onMouseDown={handleEvent}
+      />
+    );
+  };
+
   const connectDrag = (_, drag) => {
     if (!boxRef.current) return;
 
     const dom = ReactDOM.findDOMNode(boxRef.current);
 
     drag(dom);
+  };
+
+  const handleSelect = (e: MouseEvent<HTMLSpanElement>) => {
+    if (e.buttons !== 1) return;
+
+    onSelect?.(data);
   };
 
   return (
@@ -133,14 +162,21 @@ const PositionLayoutItem: React.FC<PositionLayoutItemProps> = React.memo((props)
         onResizeStart={handleResizeStart}
         onResize={handleResize}
         onResizeStop={handleResizeStop}
-        resizeHandles={resizeHandles}
-        className={`${prefixCls}-position-layout-item`}
+        resizeHandles={selected ? resizeHandles : []}
+        handle={renderResizeHandle as any}
+        className={`${positionLayoutItemCls}${
+          selected ? ` ${positionLayoutItemCls}-selected` : ''
+        }`}
+        data-position-layout-item-id={data.i}
+        data-selected={selected}
         minConstraints={[10, 10]}
         draggableOpts={{
           enableUserSelectHack: false,
         }}
       >
-        {children}
+        <div className={`${positionLayoutItemCls}-content`} onMouseDown={handleSelect}>
+          {children}
+        </div>
       </ResizableBox>
     </Draggable>
   );

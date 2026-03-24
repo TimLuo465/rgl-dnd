@@ -1,4 +1,12 @@
-import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import React, {
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { ResizeCallbackData } from 'react-resizable';
 import { DEFAULT_POSITION_LAYOUT, prefixCls } from '../../constants';
 import { LayoutItem, PositionLayoutProps, PositionLayoutRef, XYCoord } from '../../types';
@@ -53,6 +61,17 @@ const getPositionChildren = (children: React.ReactNode): LayoutItem[] => {
   return items;
 };
 
+const getPositionChildById = (children: React.ReactNode, itemId: string) => {
+  const items = React.Children.toArray(children);
+  const index = items.findIndex((c) => (c as any).props?.['data-position']?.i === itemId);
+
+  if (index > -1) {
+    return (items[index] as any).props['data-position'];
+  }
+
+  return null;
+};
+
 const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>((props, ref) => {
   const {
     layoutItem,
@@ -63,13 +82,17 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
     empty,
     children,
     onDrop,
+    onBeforeHover,
     onResizeStop,
+    onItemPosChange,
+    onSelectedItemChange,
     onZIndexChange,
   } = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const guidesRef = useRef<SmartGuidesRef | null>(null);
   const dragCore = useMemo(() => new DragCore(), []);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   const resetState = useCallback(() => {
     const rect = getPlaceholderRect();
@@ -91,6 +114,62 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
     onZIndexChange?.(changedItems);
   });
 
+  const updateSelectedItem = useEvent((itemId: string | null) => {
+    if (!itemId || selectedItemId === itemId) return;
+
+    const currItem = getPositionChildById(children, itemId);
+
+    setSelectedItemId(itemId);
+    onSelectedItemChange?.(currItem);
+  });
+
+  const nudgeSelectedItem = useEvent((dx: number, dy: number) => {
+    if (!selectedItemId || !containerRef.current) return;
+
+    const currItem = getPositionChildById(children, selectedItemId);
+
+    if (!currItem) return;
+
+    const { offsetWidth, offsetHeight } = containerRef.current;
+    const maxX = Math.max(0, offsetWidth - currItem.w);
+    const maxY = Math.max(0, offsetHeight - currItem.h);
+    const newItem = {
+      ...currItem,
+      x: Math.min(maxX, Math.max(0, plus(currItem.x, dx))),
+      y: Math.min(maxY, Math.max(0, plus(currItem.y, dy))),
+    };
+
+    if (newItem.x === currItem.x && newItem.y === currItem.y) {
+      return;
+    }
+
+    onItemPosChange?.(newItem);
+  });
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!selectedItemId) return;
+
+    const { key } = event;
+    const keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+
+    if (!keys.includes(key)) return;
+
+    let [dx, dy] = [0, 0];
+
+    if (key === 'ArrowLeft') {
+      dx = -1;
+    } else if (key === 'ArrowRight') {
+      dx = 1;
+    } else if (key === 'ArrowUp') {
+      dy = -1;
+    } else if (key === 'ArrowDown') {
+      dy = 1;
+    }
+
+    event.preventDefault();
+    nudgeSelectedItem(dx, dy);
+  };
+
   useImperativeHandle(
     ref,
     () => ({
@@ -98,6 +177,8 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
       sendBackward: (itemId: string) => moveLayer(itemId, 'backward'),
       bringToFront: (itemId: string) => moveLayer(itemId, 'front'),
       sendToBack: (itemId: string) => moveLayer(itemId, 'back'),
+      selectItem: (itemId: string) => updateSelectedItem(itemId),
+      clearSelection: () => updateSelectedItem(null),
     }),
     [moveLayer]
   );
@@ -135,6 +216,8 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
   const handleHover = (item: LayoutItem, offset: XYCoord, itemType: string) => {
     if (item.i === layoutItem.i) return;
 
+    if (onBeforeHover?.(item, itemType) === false) return;
+
     const { el } = item.extra;
     const draggingNode = getDraggingEl(el, itemType);
 
@@ -146,6 +229,11 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
     }
 
     const preferredSize = getHoverItemSize(item, itemType);
+
+    if (!preferredSize) {
+      console.warn('item not found w and h props, skip hover.', item);
+      return;
+    }
 
     dragCore.calcBounds();
     dragCore.calcSnapRects(draggingNode);
@@ -226,6 +314,7 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
 
   const handleResizeStop = (item: LayoutItem) => {
     const rect = getPlaceholderRect();
+    if (!rect) return;
 
     resetState();
     onResizeStop?.({
@@ -253,8 +342,10 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
           data={item}
           source={containerRef.current}
           type={DEFAULT_POSITION_LAYOUT}
+          selected={selectedItemId === item.i}
           onResize={handleResize}
           onResizeStop={handleResizeStop}
+          onSelect={(selectedItem) => updateSelectedItem(selectedItem.i)}
         >
           {React.cloneElement(child, {
             ...child.props,
@@ -280,7 +371,12 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
 
   return (
     <Droppable canDrop={droppable} accept={groups} onHover={handleHover} onDrop={handleDrop}>
-      <div className={`${prefixCls}-position-layout ${className}`.trim()} ref={containerRef}>
+      <div
+        className={`${prefixCls}-position-layout ${className}`.trim()}
+        ref={containerRef}
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+      >
         {renderItems()}
         <SmartGuides ref={guidesRef} />
       </div>

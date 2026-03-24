@@ -204,6 +204,10 @@ export interface PositionLayoutRef {
   bringToFront: (itemId: string) => void;
   /** 置于底层：移动到最低层，结果会重新归一化。 */
   sendToBack: (itemId: string) => void;
+  /** 选中指定子项。 */
+  selectItem: (itemId: string) => void;
+  /** 清空当前选中项。 */
+  clearSelection: () => void;
 }
 
 export interface PositionLayoutProps
@@ -211,8 +215,15 @@ export interface PositionLayoutProps
     FlowLayoutProps,
     'layoutItem' | 'canDrop' | 'droppable' | 'isEmpty' | 'empty' | 'onDrop'
   > {
+  children?: ReactNode;
   className?: string;
+  /** 悬停前回调，返回false则阻止悬停 */
+  onBeforeHover?: (item: LayoutItem, itemType: string) => Boolean;
   onResizeStop?: (data: LayoutItem) => void;
+  /** 子项位置发生变更时触发，例如键盘微调。 */
+  onItemPosChange?: (data: LayoutItem) => void;
+  /** 选中项变化时触发。 */
+  onSelectedItemChange?: (item: LayoutItem | null) => void;
   /**
    * 层级变化回调（批量）。
    * 返回值是“本次操作后所有受影响元素”的最新数据，zIndex 已保证为连续唯一值 1..N。
@@ -222,6 +233,7 @@ export interface PositionLayoutProps
 
 export interface PositionLayoutItemProps extends Omit<FlowLayoutItemProps, 'connectDrag'> {
   source: HTMLElement;
+  selected?: boolean;
   resizeHandles?: ResizeHandle[];
   onResize?: (
     data: LayoutItem,
@@ -229,7 +241,6 @@ export interface PositionLayoutItemProps extends Omit<FlowLayoutItemProps, 'conn
     resizeCallbackData: ResizeCallbackData
   ) => void;
   onResizeStop?: (data: LayoutItem) => void;
+  onSelect?: (data: LayoutItem) => void;
   /** 自定义调整手柄方向，默认为所有八个方向 */
 }
-
-export interface PositionLayoutProps extends FlowLayoutProps {}

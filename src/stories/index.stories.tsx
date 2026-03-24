@@ -229,12 +229,16 @@ export const Default: React.FC = () => {
     layoutRef?.[action]?.(itemId);
   };
 
-  const selectPositionItem = (item: LayoutItem) => {
-    if (!item.pId) return;
+  const onSelectedPositionItemChange = (parentId: string, itemId: string | null) => {
+    setActivePositionItem((current) => {
+      if (!itemId) {
+        return current?.parentId === parentId ? null : current;
+      }
 
-    setActivePositionItem({
-      parentId: item.pId,
-      itemId: item.i,
+      return {
+        parentId,
+        itemId,
+      };
     });
   };
 
@@ -290,10 +294,37 @@ export const Default: React.FC = () => {
   const onResizeStop = (data: LayoutItem) => {
     const curr = getLayoutItem(data.i);
 
-    if (curr) {
-      layoutMap.current[data.i] = data;
-      setLayouts([...layouts]);
-    }
+    if (!curr) return;
+
+    const nextItem = sanitizeLayoutItem(
+      {
+        ...curr,
+        ...data,
+      },
+      false
+    );
+
+    const newLayouts = layouts.map((item) => (item.i === data.i ? nextItem : item));
+    layoutMap.current[data.i] = nextItem;
+    setLayouts(newLayouts);
+  };
+
+  const onPositionItemChange = (data: LayoutItem) => {
+    const curr = getLayoutItem(data.i);
+
+    if (!curr) return;
+
+    const nextItem = sanitizeLayoutItem(
+      {
+        ...curr,
+        ...data,
+      },
+      false
+    );
+
+    const newLayouts = layouts.map((item) => (item.i === data.i ? nextItem : item));
+    layoutMap.current[data.i] = nextItem;
+    setLayouts(newLayouts);
   };
 
   const renderPositionLayout = (data) => {
@@ -308,7 +339,11 @@ export const Default: React.FC = () => {
               onDrop={onPositionLayoutDrop}
               empty={EmptyContainer}
               onResizeStop={onResizeStop}
+              onItemPosChange={onPositionItemChange}
               onZIndexChange={onPositionLayoutZIndexChange}
+              onSelectedItemChange={(selectedItem) =>
+                onSelectedPositionItemChange(item.i, selectedItem?.i)
+              }
             >
               {renderPositionLayout(item.children)}
             </PositionLayout>
@@ -339,7 +374,8 @@ export const Default: React.FC = () => {
         data-id={item.i}
         onClick={onClick}
         style={{
-          border: isActive ? '2px solid #0470c1' : '1px solid #ddd',
+          border: '1px solid #ddd',
+          boxShadow: 'none',
           cursor: onClick ? 'pointer' : 'default',
           height: '100%',
           minHeight: '80px',
@@ -362,7 +398,6 @@ export const Default: React.FC = () => {
         item={item}
         data-position={item}
         key={item.i}
-        onClick={() => selectPositionItem(item)}
         isActive={activePositionItem?.itemId === item.i}
       ></Box>
     );
@@ -445,7 +480,11 @@ export const Default: React.FC = () => {
             empty={<EmptyContainer />}
             onDrop={onPositionLayoutDrop}
             onResizeStop={onResizeStop}
+            onItemPosChange={onPositionItemChange}
             onZIndexChange={onPositionLayoutZIndexChange}
+            onSelectedItemChange={(selectedItem) =>
+              onSelectedPositionItemChange(item.i, selectedItem?.i)
+            }
           >
             {renderPositionLayout(item.children.map((i) => getLayoutItem(i)))}
           </PositionLayout>
@@ -630,7 +669,9 @@ export const Default: React.FC = () => {
           置于底层
         </button>
         <span style={{ lineHeight: '32px', color: '#666' }}>
-          {activePositionItem ? `当前选中：${activePositionItem.itemId.substring(1, 5)}` : '请先点击绝对定位子组件'}
+          {activePositionItem
+            ? `当前选中：${activePositionItem.itemId.substring(1, 5)}`
+            : '请先点击绝对定位子组件'}
         </span>
       </div>
       <div id="grid-layout">
