@@ -32,7 +32,6 @@ import {
   observeDom,
   pickLayoutItem,
   reLayout,
-  setComDisplay,
   withLayoutItem,
 } from '../utils';
 import { calcDraggingItemGridSize, calcDraggingItemPixelSize } from '../utils/layout-size';
@@ -254,32 +253,22 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     }, 50);
   }
 
-  onOtherLayoutHover = (itemType: string) => {
+  onOtherLayoutHover = () => {
     if (this.isHoverOtherLayout) return;
+
     this.isHoverOtherLayout = true;
 
     if (this.draggingItem) {
-      // 移入流式容器时候，隐藏占位符
+      // 移入其他布局时，隐藏占位符
       this.placeholderRef.current.updatePlaceholder(null);
-      if (![DEFAULT_FLOW_LAYOUT, DEFAULT_ITEMTYPE].includes(itemType)) {
-        // 如果是网格布局中的组件拖入到流式布局，那么原有网格布局中的组件在hover的时候需要隐藏
-        setComDisplay(this.draggingItem.i, 'none');
-      }
     }
   };
 
   onOtherLayoutDrop = (layoutItem: LayoutItem | null, itemType: string) => {
-    // 流式容器drop的时候，清空状态
-    const { draggingItem } = this;
-    if (layoutItem) {
-      this.resetDraggingState(layoutItem.i);
-    } else if (draggingItem) {
-      this.resetDraggingState(draggingItem.i);
-      if (![DEFAULT_FLOW_LAYOUT, DEFAULT_ITEMTYPE, DEFAULT_POSITION_LAYOUT].includes(itemType)) {
-        // 如果是网格布局中的组件拖入到流式布局，那么原有网格布局中的组件在hover的时候需要隐藏
-        setComDisplay(draggingItem.i, 'block');
-      }
-    }
+    // 其他布局drop的时候，清空状态
+    const i = layoutItem?.i || this.draggingItem?.i;
+
+    this.resetDraggingState(i);
   };
 
   // isUserAction - if true, it maybe drop, resize or swap, if false, it maybe correctBounds
@@ -430,7 +419,12 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   }
 
   getDraggingItemPixelSize = (item: DragItem, itemType?: string) => {
-    return calcDraggingItemPixelSize(item, itemType, this.props.droppingItem, this.getPositionParams());
+    return calcDraggingItemPixelSize(
+      item,
+      itemType,
+      this.props.droppingItem,
+      this.getPositionParams()
+    );
   };
 
   getLayoutRuntimeApi = (): LayoutRuntimeApi => ({
@@ -452,6 +446,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
 
     const { preventCollision, compactType, cols } = this.props;
 
+    // 避免Draggable中的 data.extra 污染到 layouts 中的值
     const newLayouts = moveElement(
       layouts,
       layoutItem,
@@ -491,6 +486,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
         return null;
       }
 
+      const { extra, ...pureItem } = item;
       let _item: any;
       if (itemType === DEFAULT_POSITION_LAYOUT) {
         const size = this.getDraggingItemGridSize(item);
@@ -500,14 +496,14 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
         }
 
         _item = {
-          ...item,
+          ...pureItem,
           i: item.i || droppingItem.i,
           w: size.w,
           h: size.h,
         };
       } else {
         _item = {
-          ...item,
+          ...pureItem,
           ...droppingItem,
           i: item.i || droppingItem.i,
         };
@@ -544,10 +540,11 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     // drag group item to other group
     if (!layoutItem) {
       if (itemType !== group) {
+        const { extra, ...pureItem } = item;
         const { props } = groupLayouts[itemType];
 
         layoutItem = {
-          ...calcLayoutByProps(item as LayoutItem, this.props, props),
+          ...calcLayoutByProps(pureItem as LayoutItem, this.props, props),
           placeholder: true,
           group,
         };

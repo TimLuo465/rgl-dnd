@@ -121,7 +121,7 @@ const PositionLayoutItem: React.FC<PositionLayoutItemProps> = React.memo((props)
     return (
       <span
         ref={ref}
-        className={`react-resizable-handle-${axis} ${positionLayoutItemCls}-handle`}
+        className={`pl-resizable-handle-${axis} pl-resizable-handle`}
         data-position-layout-handle={axis}
         data-axis={axis}
         onClick={handleEvent}
@@ -141,6 +141,7 @@ const PositionLayoutItem: React.FC<PositionLayoutItemProps> = React.memo((props)
   const handleSelect = (e: MouseEvent<HTMLSpanElement>) => {
     if (e.buttons !== 1) return;
 
+    e.stopPropagation();
     onSelect?.(data);
   };
 

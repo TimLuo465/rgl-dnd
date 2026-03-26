@@ -39,7 +39,7 @@ const Draggable: React.FC<DraggableProps> = memo((props) => {
       end(draggedItem: DragItem, monitor) {
         const didDrop = monitor.didDrop();
         const itemType = monitor.getItemType() as string;
-        const item = monitor.getItem();
+        const { extra, ...item } = monitor.getItem();
 
         onDragEnd?.(item, didDrop, itemType);
         event.emit('dragEnd.cardItem', item, didDrop, itemType);

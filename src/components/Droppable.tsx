@@ -17,21 +17,20 @@ const Droppable: React.FC<DroppableProps> = (props) => {
   const [{ canDrop: _canDrop, isOver }, connect] = useDrop(
     () => ({
       accept: canDrop ? accept : [],
-      drop(_item: unknown, monitor) {
-        const item = monitor.getItem();
-        const itemType = monitor.getItemType() as string;
-
+      drop(_item: any, monitor) {
         if (monitor.isOver({ shallow: true })) {
-          onDrop?.(item, itemType);
+          const { extra, ...pureItem } = monitor.getItem();
+          const itemType = monitor.getItemType() as string;
+
+          onDrop?.(pureItem, itemType);
         }
       },
       hover: (item: any, monitor) => {
-        let clientOffset = monitor.getClientOffset();
-        let offset = monitor.getSourceClientOffset();
-        const itemType = monitor.getItemType() as string;
-
         if (monitor.isOver({ shallow: true })) {
+          const itemType = monitor.getItemType() as string;
           const { x, y } = item.extra.dragOffset;
+          let offset = monitor.getSourceClientOffset();
+          let clientOffset = monitor.getClientOffset();
 
           clientOffset = {
             x: clientOffset.x - x,

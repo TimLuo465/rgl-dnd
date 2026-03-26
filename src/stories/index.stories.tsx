@@ -309,24 +309,6 @@ export const Default: React.FC = () => {
     setLayouts(newLayouts);
   };
 
-  const onPositionItemChange = (data: LayoutItem) => {
-    const curr = getLayoutItem(data.i);
-
-    if (!curr) return;
-
-    const nextItem = sanitizeLayoutItem(
-      {
-        ...curr,
-        ...data,
-      },
-      false
-    );
-
-    const newLayouts = layouts.map((item) => (item.i === data.i ? nextItem : item));
-    layoutMap.current[data.i] = nextItem;
-    setLayouts(newLayouts);
-  };
-
   const renderPositionLayout = (data) => {
     if (!checkArray(data)) return;
     return data.map((item) => {
@@ -336,14 +318,14 @@ export const Default: React.FC = () => {
             <PositionLayout
               ref={(ref) => setPositionLayoutRef(item.i, ref)}
               layoutItem={item}
+              selectedItemId={
+                activePositionItem?.parentId === item.i ? activePositionItem.itemId : ''
+              }
               onDrop={onPositionLayoutDrop}
               empty={EmptyContainer}
               onResizeStop={onResizeStop}
-              onItemPosChange={onPositionItemChange}
               onZIndexChange={onPositionLayoutZIndexChange}
-              onSelectedItemChange={(selectedItem) =>
-                onSelectedPositionItemChange(item.i, selectedItem?.i)
-              }
+              onItemSelect={(selectedItem) => onSelectedPositionItemChange(item.i, selectedItem?.i)}
             >
               {renderPositionLayout(item.children)}
             </PositionLayout>
@@ -477,14 +459,14 @@ export const Default: React.FC = () => {
           <PositionLayout
             ref={(ref) => setPositionLayoutRef(item.i, ref)}
             layoutItem={item}
+            selectedItemId={
+              activePositionItem?.parentId === item.i ? activePositionItem.itemId : ''
+            }
             empty={<EmptyContainer />}
             onDrop={onPositionLayoutDrop}
             onResizeStop={onResizeStop}
-            onItemPosChange={onPositionItemChange}
             onZIndexChange={onPositionLayoutZIndexChange}
-            onSelectedItemChange={(selectedItem) =>
-              onSelectedPositionItemChange(item.i, selectedItem?.i)
-            }
+            onItemSelect={(selectedItem) => onSelectedPositionItemChange(item.i, selectedItem?.i)}
           >
             {renderPositionLayout(item.children.map((i) => getLayoutItem(i)))}
           </PositionLayout>

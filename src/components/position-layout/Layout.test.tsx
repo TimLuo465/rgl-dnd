@@ -18,8 +18,10 @@ jest.mock('../Droppable', () => {
 });
 
 type HarnessProps = {
-  onSelectedItemChange?: (item: LayoutItem | null) => void;
-  onItemPosChange?: (item: LayoutItem) => void;
+  initialSelectedItemId?: string;
+  selectedItemId?: string;
+  onItemSelect?: (item: LayoutItem | null) => void;
+  onZIndexChange?: (items: LayoutItem[]) => void;
 };
 
 const parentId = 'parent-layout';
@@ -57,38 +59,39 @@ const createLayouts = (): LayoutItem[] => [
 ];
 
 const TestHarness = React.forwardRef<PositionLayoutRef, HarnessProps>((props, ref) => {
-  const { onSelectedItemChange, onItemPosChange } = props;
-  const [layouts, setLayouts] = React.useState<LayoutItem[]>(createLayouts);
+  const {
+    initialSelectedItemId = '',
+    selectedItemId: controlledSelectedItemId,
+    onItemSelect,
+    onZIndexChange,
+  } = props;
+  const [selectedItemId, setSelectedItemId] = React.useState<string>(initialSelectedItemId);
 
-  const handleItemPosChange = React.useCallback(
-    (item: LayoutItem) => {
-      setLayouts((prevLayouts) =>
-        prevLayouts.map((layout) => {
-          if (layout.i !== item.i) {
-            return layout;
-          }
+  React.useEffect(() => {
+    if (controlledSelectedItemId === undefined) return;
 
-          return {
-            ...layout,
-            ...item,
-          };
-        })
-      );
-      onItemPosChange?.(item);
+    setSelectedItemId(controlledSelectedItemId);
+  }, [controlledSelectedItemId]);
+
+  const parent = createLayouts()[0];
+  const children = createLayouts().slice(1);
+
+  const handleItemSelect = React.useCallback(
+    (item: LayoutItem | null) => {
+      setSelectedItemId(item?.i || '');
+      onItemSelect?.(item);
     },
-    [onItemPosChange]
+    [onItemSelect]
   );
-
-  const parent = layouts[0];
-  const children = layouts.slice(1);
 
   return (
     <PositionLayout
       ref={ref}
       layoutItem={parent}
       empty={null}
-      onItemPosChange={handleItemPosChange}
-      onSelectedItemChange={onSelectedItemChange}
+      selectedItemId={selectedItemId}
+      onItemSelect={handleItemSelect}
+      onZIndexChange={onZIndexChange}
     >
       {children.map((item) => (
         <div data-position={item} data-testid={`content-${item.i}`} key={item.i}>
@@ -110,20 +113,7 @@ const getHandleElements = (itemId: string) => {
 
   if (!item) return [];
 
-  return Array.from(
-    item.querySelectorAll('[data-position-layout-handle]')
-  ) as HTMLElement[];
-};
-
-const setLayoutSize = (layout: HTMLElement, width: number, height: number) => {
-  Object.defineProperty(layout, 'offsetWidth', {
-    configurable: true,
-    value: width,
-  });
-  Object.defineProperty(layout, 'offsetHeight', {
-    configurable: true,
-    value: height,
-  });
+  return Array.from(item.querySelectorAll('[data-position-layout-handle]')) as HTMLElement[];
 };
 
 describe('PositionLayout selection', () => {
@@ -140,52 +130,22 @@ describe('PositionLayout selection', () => {
     jest.clearAllMocks();
   });
 
-  it('supports imperative selection through ref', () => {
-    const ref = React.createRef<PositionLayoutRef>();
-    const onSelectedItemChange = jest.fn();
-
+  it('renders resize handles only for the controlled selected item', () => {
     act(() => {
-      ReactDOM.render(
-        <TestHarness ref={ref} onSelectedItemChange={onSelectedItemChange} />,
-        container
-      );
-    });
-
-    expect(getHandleElements(childAId)).toHaveLength(0);
-
-    act(() => {
-      ref.current?.selectItem(childAId);
+      ReactDOM.render(<TestHarness initialSelectedItemId={childAId} />, container);
     });
 
     expect(getItemElement(childAId)?.getAttribute('data-selected')).toBe('true');
+    expect(getItemElement(childBId)?.getAttribute('data-selected')).toBe('false');
     expect(getHandleElements(childAId)).toHaveLength(8);
-    expect(onSelectedItemChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ i: childAId, pId: parentId })
-    );
+    expect(getHandleElements(childBId)).toHaveLength(0);
   });
 
-  it('keeps the current selection when clearSelection is called', () => {
-    const ref = React.createRef<PositionLayoutRef>();
+  it('calls onItemSelect and updates the controlled selected item on left-button press', () => {
+    const onItemSelect = jest.fn();
 
     act(() => {
-      ReactDOM.render(<TestHarness ref={ref} />, container);
-    });
-
-    act(() => {
-      ref.current?.selectItem(childAId);
-    });
-
-    act(() => {
-      ref.current?.clearSelection();
-    });
-
-    expect(getItemElement(childAId)?.getAttribute('data-selected')).toBe('true');
-    expect(getHandleElements(childAId)).toHaveLength(8);
-  });
-
-  it('selects the pressed item and only exposes resize handles for the active item', () => {
-    act(() => {
-      ReactDOM.render(<TestHarness />, container);
+      ReactDOM.render(<TestHarness onItemSelect={onItemSelect} />, container);
     });
 
     const secondContent = document.querySelector(
@@ -196,50 +156,50 @@ describe('PositionLayout selection', () => {
       secondContent.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, buttons: 1 }));
     });
 
+    expect(onItemSelect).toHaveBeenLastCalledWith(
+      expect.objectContaining({ i: childBId, pId: parentId })
+    );
     expect(getItemElement(childAId)?.getAttribute('data-selected')).toBe('false');
     expect(getItemElement(childBId)?.getAttribute('data-selected')).toBe('true');
     expect(getHandleElements(childAId)).toHaveLength(0);
     expect(getHandleElements(childBId)).toHaveLength(8);
   });
 
-  it('nudges the selected item with arrow keys and clamps movement to layout bounds', () => {
-    const onItemPosChange = jest.fn();
+  it('ignores non-primary mouse presses for selection', () => {
+    const onItemSelect = jest.fn();
+
+    act(() => {
+      ReactDOM.render(<TestHarness onItemSelect={onItemSelect} />, container);
+    });
+
+    const secondContent = document.querySelector(
+      `[data-testid="content-${childBId}"]`
+    ) as HTMLElement;
+
+    act(() => {
+      secondContent.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, buttons: 0 }));
+    });
+
+    expect(onItemSelect).not.toHaveBeenCalled();
+    expect(getHandleElements(childAId)).toHaveLength(0);
+    expect(getHandleElements(childBId)).toHaveLength(0);
+  });
+
+  it('exposes z-index actions through ref and forwards changed items', () => {
     const ref = React.createRef<PositionLayoutRef>();
+    const onZIndexChange = jest.fn();
 
     act(() => {
-      ReactDOM.render(<TestHarness ref={ref} onItemPosChange={onItemPosChange} />, container);
-    });
-
-    const layout = container.querySelector('.rgl-dnd-position-layout') as HTMLElement;
-    setLayoutSize(layout, 400, 300);
-
-    act(() => {
-      ref.current?.selectItem(childAId);
+      ReactDOM.render(<TestHarness ref={ref} onZIndexChange={onZIndexChange} />, container);
     });
 
     act(() => {
-      layout.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      ref.current?.bringForward(childAId);
     });
 
-    expect(onItemPosChange).toHaveBeenCalledWith(
-      expect.objectContaining({
-        i: childAId,
-        x: 11,
-        y: 12,
-      })
-    );
-    expect(getItemElement(childAId)?.style.transform).toContain('translate(11px, 12px)');
-
-    act(() => {
-      ref.current?.selectItem(childBId);
-    });
-
-    for (let index = 0; index < 300; index += 1) {
-      act(() => {
-        layout.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-      });
-    }
-
-    expect(getItemElement(childBId)?.style.transform).toContain('translate(300px, 24px)');
+    expect(onZIndexChange).toHaveBeenCalledWith([
+      expect.objectContaining({ i: childBId, zIndex: 1 }),
+      expect.objectContaining({ i: childAId, zIndex: 2 }),
+    ]);
   });
 });

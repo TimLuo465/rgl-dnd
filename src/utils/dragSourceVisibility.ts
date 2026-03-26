@@ -29,6 +29,7 @@ export class DragSourceVisibilityController {
 
   hide(item: DragItem) {
     const sourceEl = item?.extra?.el as HTMLElement;
+
     if (!sourceEl) {
       return;
     }

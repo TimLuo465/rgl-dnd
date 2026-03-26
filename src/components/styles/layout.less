@@ -1,3 +1,4 @@
+@pl-handle-prefix: pl-resizable-handle;
 @pl-line-color: #4af;
 @pl-line-width: 1px;
 @pl-handle-size: 8px;
@@ -160,95 +161,93 @@
   z-index: 1;
 }
 
-.rgl-dnd-position-layout-item {
-  .rgl-dnd-position-layout-item-handle {
-    position: absolute;
-    display: block;
-    width: @pl-handle-size;
-    height: @pl-handle-size;
-    padding: 0;
-    margin: 0;
-    border: 1px solid @pl-line-color;
-    border-radius: 50%;
-    box-sizing: border-box;
-    background: #fff;
-    background-image: none;
-    background-origin: initial;
-    background-repeat: no-repeat;
-    box-shadow: 0 0 0 1px @pl-handle-ring;
-    transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
-    touch-action: none;
-    user-select: none;
-    z-index: 2;
+.@{pl-handle-prefix} {
+  position: absolute;
+  display: block;
+  width: @pl-handle-size;
+  height: @pl-handle-size;
+  padding: 0;
+  margin: 0;
+  border: 1px solid @pl-line-color;
+  border-radius: 50%;
+  box-sizing: border-box;
+  background: #fff;
+  background-image: none;
+  background-origin: initial;
+  background-repeat: no-repeat;
+  box-shadow: 0 0 0 1px @pl-handle-ring;
+  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  touch-action: none;
+  user-select: none;
+  z-index: 2;
 
-    &:hover {
-      background: @pl-line-color;
-      box-shadow: 0 0 0 2px @pl-handle-hover-shadow;
-    }
-
-    &:active {
-      background: @pl-line-color;
-      box-shadow: 0 0 0 3px @pl-handle-active-shadow;
-    }
+  &:hover {
+    background: @pl-line-color;
+    box-shadow: 0 0 0 2px @pl-handle-hover-shadow;
   }
 
-  .react-resizable-handle-nw {
-    top: 0;
-    left: 0;
-    transform: translate(-50%, -50%);
-    cursor: nw-resize;
+  &:active {
+    background: @pl-line-color;
+    box-shadow: 0 0 0 3px @pl-handle-active-shadow;
   }
+}
 
-  .react-resizable-handle-ne {
-    top: 0;
-    right: 0;
-    transform: translate(50%, -50%);
-    cursor: ne-resize;
-  }
+.@{pl-handle-prefix}-nw {
+  top: 0;
+  left: 0;
+  transform: translate(-50%, -50%);
+  cursor: nw-resize;
+}
 
-  .react-resizable-handle-sw {
-    bottom: 0;
-    left: 0;
-    transform: translate(-50%, 50%);
-    cursor: sw-resize;
-  }
+.@{pl-handle-prefix}-ne {
+  top: 0;
+  right: 0;
+  transform: translate(50%, -50%);
+  cursor: ne-resize;
+}
 
-  .react-resizable-handle-se {
-    right: 0;
-    bottom: 0;
-    transform: translate(50%, 50%);
-    cursor: se-resize;
-  }
+.@{pl-handle-prefix}-sw {
+  bottom: 0;
+  left: 0;
+  transform: translate(-50%, 50%);
+  cursor: sw-resize;
+}
 
-  .react-resizable-handle-n {
-    top: 0;
-    left: 50%;
-    margin-left: 0;
-    transform: translate(-50%, -50%);
-    cursor: ns-resize;
-  }
+.@{pl-handle-prefix}-se {
+  right: 0;
+  bottom: 0;
+  transform: translate(50%, 50%);
+  cursor: se-resize;
+}
 
-  .react-resizable-handle-s {
-    bottom: 0;
-    left: 50%;
-    margin-left: 0;
-    transform: translate(-50%, 50%);
-    cursor: ns-resize;
-  }
+.@{pl-handle-prefix}-n {
+  top: 0;
+  left: 50%;
+  margin-left: 0;
+  transform: translate(-50%, -50%);
+  cursor: ns-resize;
+}
 
-  .react-resizable-handle-w {
-    top: 50%;
-    left: 0;
-    margin-top: 0;
-    transform: translate(-50%, -50%);
-    cursor: ew-resize;
-  }
+.@{pl-handle-prefix}-s {
+  bottom: 0;
+  left: 50%;
+  margin-left: 0;
+  transform: translate(-50%, 50%);
+  cursor: ns-resize;
+}
 
-  .react-resizable-handle-e {
-    top: 50%;
-    right: 0;
-    margin-top: 0;
-    transform: translate(50%, -50%);
-    cursor: ew-resize;
-  }
+.@{pl-handle-prefix}-w {
+  top: 50%;
+  left: 0;
+  margin-top: 0;
+  transform: translate(-50%, -50%);
+  cursor: ew-resize;
+}
+
+.@{pl-handle-prefix}-e {
+  top: 50%;
+  right: 0;
+  margin-top: 0;
+  transform: translate(50%, -50%);
+  cursor: ew-resize;
 }
