@@ -179,14 +179,13 @@ export interface FlowLayoutProps extends React.Attributes {
   [key: string]: any;
 }
 
-export interface FlowLayoutItemProps {
+export interface FlowLayoutItemProps extends Pick<DraggableProps, 'onDragEnd'> {
   data: LayoutItem;
   type?: string;
   children?: ReactNode;
   draggable?: boolean;
   onDragStart?: (draggedItem: DragItem) => void;
   connectDrag?: (item: DragItem, drag: ConnectDragSource) => void;
-  onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;
 }
 
 export interface indicatorInfo {
@@ -207,19 +206,22 @@ export interface PositionLayoutRef {
 }
 
 export interface PositionLayoutProps
-  extends Pick<
-    FlowLayoutProps,
-    'layoutItem' | 'canDrop' | 'droppable' | 'isEmpty' | 'empty' | 'onDrop'
-  > {
+  extends Pick<FlowLayoutProps, 'layoutItem' | 'droppable' | 'empty' | 'onDragStart'> {
   children?: ReactNode;
   className?: string;
   selectedItemId?: string;
   /** 悬停前回调，返回false则阻止悬停 */
   onBeforeHover?: (item: LayoutItem, itemType: string) => Boolean;
   onResizeStop?: (data: LayoutItem) => void;
+  onBeforeDrop?: (draggingItem: DragItem, itemType: string, type: 'move' | 'create') => Boolean;
+  onDrop?: (
+    layoutItem: LayoutItem | null,
+    droppedItem: LayoutItem,
+    itemType: string,
+    type: 'move' | 'create'
+  ) => void;
   /** 选中项变化时触发。 */
-  onItemSelect?: (item: LayoutItem | null) => void;
-  onItemDragStart?: (draggedItem: DragItem) => void;
+  onSelect?: (item: LayoutItem | null) => void;
   /**
    * 层级变化回调（批量）。
    * 返回值是“本次操作后所有受影响元素”的最新数据，zIndex 已保证为连续唯一值 1..N。

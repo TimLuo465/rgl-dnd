@@ -325,7 +325,7 @@ export const Default: React.FC = () => {
               empty={EmptyContainer}
               onResizeStop={onResizeStop}
               onZIndexChange={onPositionLayoutZIndexChange}
-              onItemSelect={(selectedItem) => onSelectedPositionItemChange(item.i, selectedItem?.i)}
+              onSelect={(selectedItem) => onSelectedPositionItemChange(item.i, selectedItem?.i)}
             >
               {renderPositionLayout(item.children)}
             </PositionLayout>
@@ -466,7 +466,7 @@ export const Default: React.FC = () => {
             onDrop={onPositionLayoutDrop}
             onResizeStop={onResizeStop}
             onZIndexChange={onPositionLayoutZIndexChange}
-            onItemSelect={(selectedItem) => onSelectedPositionItemChange(item.i, selectedItem?.i)}
+            onSelect={(selectedItem) => onSelectedPositionItemChange(item.i, selectedItem?.i)}
           >
             {renderPositionLayout(item.children.map((i) => getLayoutItem(i)))}
           </PositionLayout>

@@ -73,8 +73,12 @@ function getDraggingGridSizeByType(
   droppingItem: DroppingItem | undefined,
   positionParams: PositionParams
 ): GridSize | null {
-  if (itemType === DEFAULT_ITEMTYPE || itemType === DEFAULT_FLOW_LAYOUT) {
+  if (itemType === DEFAULT_ITEMTYPE) {
     return getGridSizeFromDroppingItem(droppingItem);
+  }
+
+  if (itemType === DEFAULT_FLOW_LAYOUT) {
+    return getGridSizeFromDragItem(item) || getGridSizeFromDroppingItem(droppingItem);
   }
 
   if (itemType === DEFAULT_POSITION_LAYOUT) {
@@ -86,6 +90,15 @@ function getDraggingGridSizeByType(
   }
 
   return getGridSizeFromDragItem(item) || getGridSizeFromDroppingItem(droppingItem);
+}
+
+export function resolveDraggingItemGridSize(
+  item: DragItem,
+  itemType: string | undefined,
+  droppingItem: DroppingItem | undefined,
+  positionParams: PositionParams
+): GridSize | null {
+  return getDraggingGridSizeByType(item, itemType, droppingItem, positionParams);
 }
 
 function gridSizeToPixelSize(size: GridSize, positionParams: PositionParams): PixelSize | null {
@@ -122,7 +135,7 @@ export function calcDraggingItemPixelSize(
   droppingItem: DroppingItem | undefined,
   positionParams: PositionParams
 ): PixelSize | null {
-  const size = getDraggingGridSizeByType(item, itemType, droppingItem, positionParams);
+  const size = resolveDraggingItemGridSize(item, itemType, droppingItem, positionParams);
   if (!size) return null;
 
   return gridSizeToPixelSize(size, positionParams);

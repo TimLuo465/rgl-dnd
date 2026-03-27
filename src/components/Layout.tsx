@@ -34,7 +34,10 @@ import {
   reLayout,
   withLayoutItem,
 } from '../utils';
-import { calcDraggingItemGridSize, calcDraggingItemPixelSize } from '../utils/layout-size';
+import {
+  calcDraggingItemPixelSize,
+  resolveDraggingItemGridSize,
+} from '../utils/layout-size';
 import Droppable from './Droppable';
 import Engine from './Engine';
 import Item from './Item';
@@ -414,8 +417,13 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     return calcXY(positionParams, y, x, item.w, item.h);
   }
 
-  getDraggingItemGridSize(item: DragItem) {
-    return calcDraggingItemGridSize(item, this.props.droppingItem, this.getPositionParams());
+  getDraggingItemGridSize(item: DragItem, itemType?: string) {
+    return resolveDraggingItemGridSize(
+      item,
+      itemType,
+      this.props.droppingItem,
+      this.getPositionParams()
+    );
   }
 
   getDraggingItemPixelSize = (item: DragItem, itemType?: string) => {
@@ -488,8 +496,13 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
 
       const { extra, ...pureItem } = item;
       let _item: any;
-      if (itemType === DEFAULT_POSITION_LAYOUT) {
-        const size = this.getDraggingItemGridSize(item);
+      if ([DEFAULT_POSITION_LAYOUT, DEFAULT_FLOW_LAYOUT].includes(itemType)) {
+        const size = resolveDraggingItemGridSize(
+          item,
+          itemType,
+          droppingItem,
+          this.getPositionParams()
+        );
 
         if (!size) {
           return null;

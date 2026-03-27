@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef } f
 import { ResizeCallbackData } from 'react-resizable';
 import { DEFAULT_POSITION_LAYOUT, prefixCls } from '../../constants';
 import { LayoutItem, PositionLayoutProps, PositionLayoutRef, XYCoord } from '../../types';
-import { checkArray, useEvent } from '../../utils';
+import { useEvent } from '../../utils';
 import { plus } from '../../utils/number-precision';
 import Droppable from '../Droppable';
 import event from '../event';
@@ -57,18 +57,17 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
   const {
     layoutItem,
     className = '',
-    canDrop = true,
     droppable = true,
-    isEmpty = false,
-    empty,
+    empty = null,
     children,
     selectedItemId = '',
     onDrop,
-    onBeforeHover,
+    onSelect,
+    onDragStart,
     onResizeStop,
-    onItemSelect,
+    onBeforeDrop,
+    onBeforeHover,
     onZIndexChange,
-    onItemDragStart,
   } = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -179,17 +178,22 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
   };
 
   const handleDrop = (draggingItem: LayoutItem, itemType: string) => {
-    if (!canDrop) return;
-    if (draggingItem.i === layoutItem.i) return;
-
     const rect = getPlaceholderRect();
-    if (!rect) return;
 
-    const positionChildren = getPositionChildren(children);
-    const layoutChildren = layoutItem.children || [];
-    const hasDraggingItem = layoutChildren.includes(draggingItem.i);
+    if (!rect || draggingItem.i === layoutItem.i) return;
+
+    const childItems = getPositionChildren(children);
+    const hasDraggingItem = !!childItems.find((item) => item.i === draggingItem.i);
+    const dropType = hasDraggingItem ? 'move' : 'create';
+
+    // 从其他布局拖入元素时，需要检查是否允许拖入
+    if (onBeforeDrop?.(draggingItem, itemType, dropType) === false) {
+      resetState();
+      return;
+    }
+
     // 已有元素再次拖入当前容器时，先做一次归一化，再读取其稳定层级。
-    const normalizedChildren = normalizeZIndexLayouts(positionChildren);
+    const normalizedChildren = normalizeZIndexLayouts(childItems);
     const normalizedDraggingItem = normalizedChildren.find((item) => item.i === draggingItem.i);
     const newDraggingItem = {
       ...draggingItem,
@@ -200,13 +204,14 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
       // 新拖入元素始终插入顶层；已有元素保留当前（归一化后）层级。
       zIndex: hasDraggingItem
         ? normalizeZIndex(normalizedDraggingItem?.zIndex ?? draggingItem.zIndex)
-        : getDefaultDroppedZIndex(positionChildren),
+        : getDefaultDroppedZIndex(childItems),
     };
 
     resetState();
     event.emit('drop.otherLayout', newDraggingItem, itemType);
+
     // 需要放在emit之后，需要先通过emit清空上层Layout的拖拽状态
-    onDrop?.(layoutItem, newDraggingItem, itemType);
+    onDrop?.(layoutItem, newDraggingItem, itemType, dropType);
   };
 
   const handleResize = (
@@ -249,14 +254,14 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
   };
 
   const renderItems = () => {
-    if (!checkArray(layoutItem?.children) || isEmpty) {
-      return empty;
-    }
+    let isEmpty = false;
 
-    return React.Children.map(children, (child: React.ReactElement) => {
+    const nodes = React.Children.map(children, (child: React.ReactElement) => {
       if (!child) return null;
 
       const item = child.props['data-position'];
+
+      isEmpty = false;
 
       return (
         <Item
@@ -267,8 +272,9 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
           selected={selectedItemId === item.i}
           onResize={handleResize}
           onResizeStop={handleResizeStop}
-          onSelect={onItemSelect}
-          onDragStart={onItemDragStart}
+          onSelect={onSelect}
+          onDragStart={onDragStart}
+          onDragEnd={resetState}
         >
           {React.cloneElement(child, {
             ...child.props,
@@ -276,6 +282,12 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
         </Item>
       );
     });
+
+    if (isEmpty) {
+      return empty;
+    }
+
+    return nodes;
   };
 
   const { groups, parentLayout } = useLayoutContext();
@@ -284,11 +296,9 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
     dragCore.init(containerRef.current!);
     renderPlaceholder();
     event.on('hover.layout', resetState);
-    window.addEventListener('mouseup', resetState);
 
     return () => {
       event.off('hover.layout', resetState);
-      window.removeEventListener('mouseup', resetState);
     };
   }, []);
 

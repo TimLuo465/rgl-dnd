@@ -3,8 +3,8 @@ import ReactDOM from 'react-dom';
 import { ResizableBox, ResizeCallbackData, ResizeHandle } from 'react-resizable';
 import { prefixCls } from '../../constants';
 import { PositionLayoutItemProps } from '../../types';
-import { minus, plus } from '../../utils/number-precision';
 import Draggable from '../Draggable';
+import { calculateResizedItem, ResizeBounds } from './utils/resize';
 import { normalizeZIndex } from './z-index';
 
 const positionLayoutItemCls = `${prefixCls}-position-layout-item`;
@@ -36,68 +36,30 @@ const PositionLayoutItem: React.FC<PositionLayoutItemProps> = React.memo((props)
     zIndex: normalizeZIndex(data.zIndex),
   };
   const boxRef = useRef(null);
-  const stateRef = useRef({
-    bounds: { minWidth: 0, minHeight: 0, width: Infinity, height: Infinity },
+  const stateRef = useRef<{ resizeBounds: ResizeBounds }>({
+    resizeBounds: {
+      containerWidth: Infinity,
+      containerHeight: Infinity,
+      initialRight: 0,
+      initialBottom: 0,
+    },
   });
 
   const handleResizeStart = (e: SyntheticEvent) => {
     e.stopPropagation();
     e.preventDefault();
 
-    stateRef.current.bounds = {
-      width: source.offsetWidth,
-      height: source.offsetHeight,
-      minWidth: data.x + data.w,
-      minHeight: data.y + data.h,
+    stateRef.current.resizeBounds = {
+      containerWidth: source.offsetWidth,
+      containerHeight: source.offsetHeight,
+      // Keep the opposite edges anchored when resizing from west/north handles.
+      initialRight: data.x + data.w,
+      initialBottom: data.y + data.h,
     };
   };
 
   const getResizingData = (callbackData: ResizeCallbackData) => {
-    const { size, handle } = callbackData;
-    const { width, height, minWidth, minHeight } = stateRef.current.bounds;
-    const newData = {
-      ...data,
-      w: Math.round(size.width),
-      h: Math.round(size.height),
-    };
-
-    // 顶部拉伸
-    if (handle.indexOf('n') > -1) {
-      const newY = data.y + minus(data.h, size.height);
-
-      if (newY < 0) {
-        newData.y = 0;
-        // 当用户一直朝顶部拉伸时，为了禁止超出容器的范围，需要对高度进行校正，加上newY(为负数)的长度
-        // 且不能超过最小高度(初始item.y+item.h)，否则会出现高度越来越小的情况
-        newData.h = Math.max(minHeight, plus(newData.h, newY));
-      } else {
-        newData.y = newY;
-      }
-    }
-
-    // 左侧拉伸
-    if (handle.indexOf('w') > -1) {
-      // 左侧向右拉伸
-      const newX = data.x + minus(data.w, size.width);
-
-      if (newX < 0) {
-        newData.x = 0;
-        // 同y逻辑相同
-        newData.w = Math.max(minWidth, plus(newData.w, newX));
-      } else {
-        newData.x = newX;
-      }
-    }
-
-    if (data.x + newData.w > width) {
-      newData.w = minus(width, data.x);
-    }
-
-    if (data.y + newData.h > height) {
-      newData.h = minus(height, data.y);
-    }
-
-    return newData;
+    return calculateResizedItem(data, callbackData, stateRef.current.resizeBounds);
   };
 
   // 处理调整大小
@@ -122,8 +84,6 @@ const PositionLayoutItem: React.FC<PositionLayoutItemProps> = React.memo((props)
       <span
         ref={ref}
         className={`pl-resizable-handle-${axis} pl-resizable-handle`}
-        data-position-layout-handle={axis}
-        data-axis={axis}
         onClick={handleEvent}
         onMouseDown={handleEvent}
       />

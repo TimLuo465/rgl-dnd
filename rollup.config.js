@@ -38,6 +38,7 @@ export default {
       plugins: [terser()],
       globals: {
         react: 'React',
+        'react-dom': 'ReactDOM',
       },
     },
   ],
@@ -64,5 +65,5 @@ export default {
     typescript({ useTsconfigDeclarationDir: true }),
     analyze(),
   ],
-  external: ['react'],
+  external: ['react', 'react-dom'],
 }

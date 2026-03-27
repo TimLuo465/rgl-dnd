@@ -20,7 +20,7 @@ jest.mock('../Droppable', () => {
 type HarnessProps = {
   initialSelectedItemId?: string;
   selectedItemId?: string;
-  onItemSelect?: (item: LayoutItem | null) => void;
+  onSelect?: (item: LayoutItem | null) => void;
   onZIndexChange?: (items: LayoutItem[]) => void;
 };
 
@@ -62,7 +62,7 @@ const TestHarness = React.forwardRef<PositionLayoutRef, HarnessProps>((props, re
   const {
     initialSelectedItemId = '',
     selectedItemId: controlledSelectedItemId,
-    onItemSelect,
+    onSelect,
     onZIndexChange,
   } = props;
   const [selectedItemId, setSelectedItemId] = React.useState<string>(initialSelectedItemId);
@@ -76,12 +76,12 @@ const TestHarness = React.forwardRef<PositionLayoutRef, HarnessProps>((props, re
   const parent = createLayouts()[0];
   const children = createLayouts().slice(1);
 
-  const handleItemSelect = React.useCallback(
+  const handleSelect = React.useCallback(
     (item: LayoutItem | null) => {
       setSelectedItemId(item?.i || '');
-      onItemSelect?.(item);
+      onSelect?.(item);
     },
-    [onItemSelect]
+    [onSelect]
   );
 
   return (
@@ -90,7 +90,7 @@ const TestHarness = React.forwardRef<PositionLayoutRef, HarnessProps>((props, re
       layoutItem={parent}
       empty={null}
       selectedItemId={selectedItemId}
-      onItemSelect={handleItemSelect}
+      onSelect={handleSelect}
       onZIndexChange={onZIndexChange}
     >
       {children.map((item) => (
@@ -113,7 +113,7 @@ const getHandleElements = (itemId: string) => {
 
   if (!item) return [];
 
-  return Array.from(item.querySelectorAll('[data-position-layout-handle]')) as HTMLElement[];
+  return Array.from(item.querySelectorAll('[class*="pl-resizable-handle-"]')) as HTMLElement[];
 };
 
 describe('PositionLayout selection', () => {
@@ -141,11 +141,11 @@ describe('PositionLayout selection', () => {
     expect(getHandleElements(childBId)).toHaveLength(0);
   });
 
-  it('calls onItemSelect and updates the controlled selected item on left-button press', () => {
-    const onItemSelect = jest.fn();
+  it('calls onSelect and updates the controlled selected item on left-button press', () => {
+    const onSelect = jest.fn();
 
     act(() => {
-      ReactDOM.render(<TestHarness onItemSelect={onItemSelect} />, container);
+      ReactDOM.render(<TestHarness onSelect={onSelect} />, container);
     });
 
     const secondContent = document.querySelector(
@@ -156,7 +156,7 @@ describe('PositionLayout selection', () => {
       secondContent.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, buttons: 1 }));
     });
 
-    expect(onItemSelect).toHaveBeenLastCalledWith(
+    expect(onSelect).toHaveBeenLastCalledWith(
       expect.objectContaining({ i: childBId, pId: parentId })
     );
     expect(getItemElement(childAId)?.getAttribute('data-selected')).toBe('false');
@@ -166,10 +166,10 @@ describe('PositionLayout selection', () => {
   });
 
   it('ignores non-primary mouse presses for selection', () => {
-    const onItemSelect = jest.fn();
+    const onSelect = jest.fn();
 
     act(() => {
-      ReactDOM.render(<TestHarness onItemSelect={onItemSelect} />, container);
+      ReactDOM.render(<TestHarness onSelect={onSelect} />, container);
     });
 
     const secondContent = document.querySelector(
@@ -180,7 +180,7 @@ describe('PositionLayout selection', () => {
       secondContent.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, buttons: 0 }));
     });
 
-    expect(onItemSelect).not.toHaveBeenCalled();
+    expect(onSelect).not.toHaveBeenCalled();
     expect(getHandleElements(childAId)).toHaveLength(0);
     expect(getHandleElements(childBId)).toHaveLength(0);
   });
