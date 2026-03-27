@@ -6,6 +6,8 @@
 @pl-handle-hover-shadow: rgba(68, 170, 255, 0.18);
 @pl-handle-active-shadow: rgba(68, 170, 255, 0.24);
 @pl-handle-ring: rgba(255, 255, 255, 0.96);
+@pl-guide-color: rgba(68, 170, 255, 0.88);
+@pl-guide-glow: rgba(68, 170, 255, 0.18);
 
 .rgl-dnd {
   position: relative;
@@ -53,6 +55,13 @@
     height: 100%;
     position: relative;
     outline: none;
+  }
+
+  &-guide-line {
+    z-index: 9998;
+    pointer-events: none;
+    opacity: 0.92;
+    box-shadow: 0 0 0 1px fade(@pl-guide-color, 12%), 0 0 10px @pl-guide-glow;
   }
 
   &-position-layout-item.react-resizable {

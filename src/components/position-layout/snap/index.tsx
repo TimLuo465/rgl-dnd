@@ -16,7 +16,7 @@ interface SmartGuidesProps {
 }
 
 export const SmartGuides = React.forwardRef<SmartGuidesRef, SmartGuidesProps>(
-  ({ guides: propGuides, color = '#E91E63', thickness = 1 }, ref) => {
+  ({ guides: propGuides, color = '#4af', thickness = 1 }, ref) => {
     const [guides, setGuidesState] = useState<GuideLine[]>(propGuides || []);
 
     // 暴露给外部的 ref
@@ -42,22 +42,21 @@ export const SmartGuides = React.forwardRef<SmartGuidesRef, SmartGuidesProps>(
           return (
             <div
               key={`${guide.type}-${guide.position}-${index}`}
-              className={`${prefixCls}-guide-line`}
+              className={`${prefixCls}-guide-line ${prefixCls}-guide-line-${guide.type}`}
+              data-guide-type={guide.type}
               style={{
                 position: 'absolute',
-                zIndex: 9999, // 确保在最顶层
                 backgroundColor: color,
-                pointerEvents: 'none', // 核心：不允许辅助线阻挡鼠标事件
                 ...(isVertical
                   ? {
                       top: 0,
-                      bottom: 0, // 贯穿整个容器高度
+                      bottom: 0,
                       left: guide.position,
                       width: thickness,
                     }
                   : {
                       left: 0,
-                      right: 0, // 贯穿整个容器宽度
+                      right: 0,
                       top: guide.position,
                       height: thickness,
                     }),
