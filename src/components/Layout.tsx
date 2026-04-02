@@ -34,10 +34,7 @@ import {
   reLayout,
   withLayoutItem,
 } from '../utils';
-import {
-  calcDraggingItemPixelSize,
-  resolveDraggingItemGridSize,
-} from '../utils/layout-size';
+import { calcDraggingItemPixelSize, resolveDraggingItemGridSize } from '../utils/layout-size';
 import Droppable from './Droppable';
 import Engine from './Engine';
 import Item from './Item';
@@ -721,7 +718,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
 
   onResize = (item: LayoutItem, w: number, h: number, direction: string) => {
     const { layouts } = this;
-    const { cols, compactType, preventCollision, rowHeight, margin } = this.props;
+    const { cols, compactType, preventCollision } = this.props;
 
     if (['n', 's'].includes(direction) && this.engine.snapline) {
       this.engine.snapline.resize(

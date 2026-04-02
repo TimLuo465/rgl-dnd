@@ -12,7 +12,6 @@
     "dist"
   ],
   "scripts": {
-    "prebuild": "yarn test",
     "build": "cross-env NODE_ENV=production rollup -c && node scripts/postbuild-sync.js",
     "prepublishOnly": "yarn build",
     "storybook": "start-storybook -p 6006",

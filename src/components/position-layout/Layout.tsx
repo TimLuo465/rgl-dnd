@@ -180,15 +180,21 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
   const handleDrop = (draggingItem: LayoutItem, itemType: string) => {
     const rect = getPlaceholderRect();
 
-    if (!rect || draggingItem.i === layoutItem.i) return;
+    if (!rect || draggingItem.i === layoutItem.i) {
+      resetState();
+      return;
+    }
 
     const childItems = getPositionChildren(children);
     const hasDraggingItem = !!childItems.find((item) => item.i === draggingItem.i);
     const dropType = hasDraggingItem ? 'move' : 'create';
-
+    const resetAllLayoutState = () => {
+      resetState();
+      event.emit('drop.otherLayout', draggingItem, itemType);
+    };
     // 从其他布局拖入元素时，需要检查是否允许拖入
     if (onBeforeDrop?.(draggingItem, itemType, dropType) === false) {
-      resetState();
+      resetAllLayoutState();
       return;
     }
 
@@ -207,8 +213,7 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
         : getDefaultDroppedZIndex(childItems),
     };
 
-    resetState();
-    event.emit('drop.otherLayout', newDraggingItem, itemType);
+    resetAllLayoutState();
 
     // 需要放在emit之后，需要先通过emit清空上层Layout的拖拽状态
     onDrop?.(layoutItem, newDraggingItem, itemType, dropType);
@@ -254,7 +259,7 @@ const PositionLayout = React.forwardRef<PositionLayoutRef, PositionLayoutProps>(
   };
 
   const renderItems = () => {
-    let isEmpty = false;
+    let isEmpty = true;
 
     const nodes = React.Children.map(children, (child: React.ReactElement) => {
       if (!child) return null;
