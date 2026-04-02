@@ -97,7 +97,7 @@ export default class SnapLine {
     this.setResizing = setResizing;
   }
 
-  reize(size: { w: number; h: number }, opts: OptsType) {
+  resize(size: { w: number; h: number }, opts: OptsType) {
     const { positionParams, onResize } = opts;
     const { w, h } = size;
     const { rowHeight, margin } = positionParams;

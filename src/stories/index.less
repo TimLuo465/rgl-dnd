@@ -2,5 +2,43 @@ html,
 body {
   height: 100%;
   width: 100%;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
   overflow: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+#root,
+.p-4 {
+  height: 100%;
+}
+
+.p-4 {
+  display: flex;
+  flex-direction: column;
+}
+
+#grid-layout {
+  flex: 1;
+  border: 1px solid gray;
+}
+
+.drag-coms {
+  display: flex;
+  margin-bottom: 1rem;
+  & > div {
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    border: 1px solid gray;
+    margin-right: 1rem;
+    cursor: move;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
 }

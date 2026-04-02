@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "sourceDir": "dist",
+  "targetDir": "",
+  "cleanTargetBeforeCopy": true
+}

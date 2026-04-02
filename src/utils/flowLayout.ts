@@ -1,5 +1,4 @@
 import { prefixCls } from '../constants';
-import { LayoutItem } from '../types';
 
 /**
  * 检查对象是否为空
@@ -15,22 +14,6 @@ export const checkObject = (data: any) => {
  */
 export const checkArray = (data: any) => {
   return Array.isArray(data) && data.length;
-};
-
-/**
- * 流式布局内组件更新后，获取新的layouts
- */
-export const getNewLayouts = (data: LayoutItem[], layoutItem: LayoutItem) => {
-  if (!checkArray(data)) return data;
-
-  const cloneData = JSON.parse(JSON.stringify(data));
-  for (let index = 0; index < cloneData.length; index++) {
-    const item = cloneData[index];
-    if (item.i === layoutItem.i) {
-      item.children = layoutItem.children;
-    }
-  }
-  return cloneData;
 };
 
 /**

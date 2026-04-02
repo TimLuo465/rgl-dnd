@@ -121,7 +121,6 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
       style,
       data,
       children,
-      dragOffset,
       onDragStart,
       onDragEnd,
       className = '',
@@ -183,7 +182,6 @@ export default class Item extends PureComponent<ItemProps, ItemStates> {
         <Draggable
           type={type}
           data={data}
-          dragOffset={dragOffset}
           draggable={data.static !== true && data.draggable !== false}
           onDragEnd={onDragEnd}
           onDragStart={onDragStart}

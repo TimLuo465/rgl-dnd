@@ -1,7 +1,6 @@
 import EventEmitter from 'eventemitter3';
 import debounce from 'lodash.debounce';
 import React, { CSSProperties } from 'react';
-import { XYCoord } from 'react-dnd';
 import {
   DEFAULT_COLS,
   DEFAULT_CONTAINER_PADDING,
@@ -11,10 +10,11 @@ import {
   DEFAULT_ITEMTYPE,
   DEFAULT_MARGIN,
   DEFAULT_MAXROWS,
+  DEFAULT_POSITION_LAYOUT,
   DEFAULT_ROWHEIGHT,
   prefixCls,
 } from '../constants';
-import { DragItem, InternalEventType, LayoutItem, LayoutProps, Size } from '../types';
+import { DragItem, InternalEventType, LayoutItem, LayoutProps, Size, XYCoord } from '../types';
 import {
   calcH,
   calcLayoutByProps,
@@ -22,6 +22,7 @@ import {
   calcXY,
   cloneLayouts,
   compact,
+  DragSourceVisibilityController,
   getAllCollisions,
   getContainerHeight,
   getLayoutItem,
@@ -31,13 +32,13 @@ import {
   observeDom,
   pickLayoutItem,
   reLayout,
-  setComDisplay,
   withLayoutItem,
 } from '../utils';
+import { calcDraggingItemPixelSize, resolveDraggingItemGridSize } from '../utils/layout-size';
 import Droppable from './Droppable';
 import Engine from './Engine';
 import Item from './Item';
-import { layoutContext, layoutStore } from './LayoutContext';
+import { layoutContext, LayoutRuntimeApi, layoutStore } from './LayoutContext';
 import Placeholder, { PlaceholderRef } from './Placeholder';
 import ResizeSnapLine, { ResizeSnapLineRef } from './ResizeSnapLine';
 import event from './event';
@@ -64,7 +65,7 @@ let groupIndex = 0;
 let hoveredGroups = [];
 
 class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
-  isHoverFlowLayout = false;
+  isHoverOtherLayout = false;
 
   group = '';
 
@@ -76,6 +77,8 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
 
   /** The lastest parent node with scrollbar */
   scrollbar: HTMLElement | null = null;
+
+  containerObserver: { disconnect: () => void } | null = null;
 
   // 调整成组件属性，onDragStart 时不再触发组件更新
   oldLayouts: LayoutItem[] | null;
@@ -94,6 +97,8 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   /** dragging position */
   prevPosition: XYCoord | null = null;
 
+  dragSourceVisibility = new DragSourceVisibilityController();
+
   offset: DOMRect | null = null;
 
   containerWidth: number = this.getWidth();
@@ -101,6 +106,8 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   static defaultProps: LayoutProps;
 
   static contextType = layoutContext;
+
+  context!: React.ContextType<typeof layoutContext>;
 
   constructor(props: LayoutProps) {
     super(props);
@@ -111,10 +118,12 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     groupIndex += 1;
     // cache the layout instance for mutli group
     groupLayouts[this.group] = this;
-    groupKeys = Object.keys(groupLayouts);
-    groupKeys.push(DEFAULT_ITEMTYPE);
-    // 流式容器默认group
-    groupKeys.push(DEFAULT_FLOW_LAYOUT);
+    groupKeys = [
+      ...Object.keys(groupLayouts),
+      DEFAULT_ITEMTYPE,
+      DEFAULT_FLOW_LAYOUT,
+      DEFAULT_POSITION_LAYOUT,
+    ];
 
     // use default group
     if (!group) {
@@ -171,11 +180,14 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       this.resize();
     }
 
+    if (this.containerRef.current) {
+      this.containerObserver = observeDom(this.containerRef.current, this.resize);
+    }
+
     this.mounted = true;
-    window.addEventListener('resize', this.resize);
     event.on('dragEnd.cardItem', this.onCardItemDragEnd);
-    event.on('hover.flowLayout', this.onFlowLayoutHover);
-    event.on('drop.flowLayout', this.onFlowLayoutDrop);
+    event.on('hover.otherLayout', this.onOtherLayoutHover);
+    event.on('drop.otherLayout', this.onOtherLayoutDrop);
     this.onLayoutMaybeChanged(this.layouts, this.props.layouts, false);
     this.event.emit('mounted');
   }
@@ -193,11 +205,13 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   }
 
   componentWillUnmount() {
+    this.dragSourceVisibility.restore();
     delete groupLayouts[this.group];
-    window.removeEventListener('resize', this.resize);
+    this.containerObserver?.disconnect();
+    this.containerObserver = null;
     event.off('dragEnd.cardItem', this.onCardItemDragEnd);
-    event.off('hover.flowLayout', this.onFlowLayoutHover);
-    event.off('drop.flowLayout', this.onFlowLayoutDrop);
+    event.off('hover.otherLayout', this.onOtherLayoutHover);
+    event.off('drop.otherLayout', this.onOtherLayoutDrop);
   }
 
   getScrollbarContainer = () => {
@@ -239,32 +253,22 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     }, 50);
   }
 
-  onFlowLayoutHover = (itemType: string) => {
-    if (this.isHoverFlowLayout) return;
-    this.isHoverFlowLayout = true;
+  onOtherLayoutHover = () => {
+    if (this.isHoverOtherLayout) return;
+
+    this.isHoverOtherLayout = true;
 
     if (this.draggingItem) {
-      // 移入流式容器时候，隐藏占位符
+      // 移入其他布局时，隐藏占位符
       this.placeholderRef.current.updatePlaceholder(null);
-      if (![DEFAULT_FLOW_LAYOUT, DEFAULT_ITEMTYPE].includes(itemType)) {
-        // 如果是网格布局中的组件拖入到流式布局，那么原有网格布局中的组件在hover的时候需要隐藏
-        setComDisplay(this.draggingItem.i, 'none');
-      }
     }
   };
 
-  onFlowLayoutDrop = (layoutItem: LayoutItem | null, itemType: string) => {
-    // 流式容器drop的时候，清空状态
-    const { draggingItem } = this;
-    if (layoutItem) {
-      this.resetDraggingState(layoutItem.i);
-    } else if (draggingItem) {
-      this.resetDraggingState(draggingItem.i);
-      if (![DEFAULT_FLOW_LAYOUT, DEFAULT_ITEMTYPE].includes(itemType)) {
-        // 如果是网格布局中的组件拖入到流式布局，那么原有网格布局中的组件在hover的时候需要隐藏
-        setComDisplay(draggingItem.i, 'block');
-      }
-    }
+  onOtherLayoutDrop = (layoutItem: LayoutItem | null, itemType: string) => {
+    // 其他布局drop的时候，清空状态
+    const i = layoutItem?.i || this.draggingItem?.i;
+
+    this.resetDraggingState(i);
   };
 
   // isUserAction - if true, it maybe drop, resize or swap, if false, it maybe correctBounds
@@ -371,9 +375,9 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   };
 
   hover = (item: DragItem, offset: XYCoord, itemType: string) => {
-    if (this.isHoverFlowLayout) {
+    if (this.isHoverOtherLayout) {
       event.emit('hover.layout');
-      this.isHoverFlowLayout = false;
+      this.isHoverOtherLayout = false;
     }
 
     const { layouts } = this;
@@ -392,7 +396,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       layoutItem = this.moveGroupItem(item, offset, itemType);
     } else {
       // move card item
-      layoutItem = this.moveCardItem(item, offset);
+      layoutItem = this.moveCardItem(item, offset, itemType);
     }
 
     if (layoutItem) {
@@ -410,6 +414,28 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     return calcXY(positionParams, y, x, item.w, item.h);
   }
 
+  getDraggingItemGridSize(item: DragItem, itemType?: string) {
+    return resolveDraggingItemGridSize(
+      item,
+      itemType,
+      this.props.droppingItem,
+      this.getPositionParams()
+    );
+  }
+
+  getDraggingItemPixelSize = (item: DragItem, itemType?: string) => {
+    return calcDraggingItemPixelSize(
+      item,
+      itemType,
+      this.props.droppingItem,
+      this.getPositionParams()
+    );
+  };
+
+  getLayoutRuntimeApi = (): LayoutRuntimeApi => ({
+    getDraggingItemPixelSize: this.getDraggingItemPixelSize,
+  });
+
   moveItem(layoutItem: LayoutItem, offset: XYCoord) {
     // for dragging item has nested layout, the nested layout has unmounted
     if (!this.containerRef.current) {
@@ -425,6 +451,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
 
     const { preventCollision, compactType, cols } = this.props;
 
+    // 避免Draggable中的 data.extra 污染到 layouts 中的值
     const newLayouts = moveElement(
       layouts,
       layoutItem,
@@ -450,21 +477,47 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   /**
    * move card item not in group layout
    */
-  moveCardItem(item: DragItem, offset: XYCoord): LayoutItem | null {
+  moveCardItem(item: DragItem, offset: XYCoord, itemType: string): LayoutItem | null {
     const { droppingItem } = this.props;
     const { draggingItem, layouts, engine } = this;
     let layoutItem: LayoutItem;
+
+    if (itemType === DEFAULT_POSITION_LAYOUT) {
+      this.dragSourceVisibility.hide(item);
+    }
 
     if (!draggingItem) {
       if (!droppingItem) {
         return null;
       }
 
-      const _item: any = {
-        ...item,
-        ...droppingItem,
-        i: item.i || droppingItem.i,
-      };
+      const { extra, ...pureItem } = item;
+      let _item: any;
+      if ([DEFAULT_POSITION_LAYOUT, DEFAULT_FLOW_LAYOUT].includes(itemType)) {
+        const size = resolveDraggingItemGridSize(
+          item,
+          itemType,
+          droppingItem,
+          this.getPositionParams()
+        );
+
+        if (!size) {
+          return null;
+        }
+
+        _item = {
+          ...pureItem,
+          i: item.i || droppingItem.i,
+          w: size.w,
+          h: size.h,
+        };
+      } else {
+        _item = {
+          ...pureItem,
+          ...droppingItem,
+          i: item.i || droppingItem.i,
+        };
+      }
 
       layoutItem = {
         ..._item,
@@ -497,10 +550,11 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     // drag group item to other group
     if (!layoutItem) {
       if (itemType !== group) {
+        const { extra, ...pureItem } = item;
         const { props } = groupLayouts[itemType];
 
         layoutItem = {
-          ...calcLayoutByProps(item as LayoutItem, this.props, props),
+          ...calcLayoutByProps(pureItem as LayoutItem, this.props, props),
           placeholder: true,
           group,
         };
@@ -608,6 +662,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   };
 
   resetDraggingState(i: string) {
+    this.dragSourceVisibility.restore();
     hoveredGroups = [];
 
     this.draggingItem = null;
@@ -628,7 +683,7 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       // 判断是否是新增以及是否允许超出边界拖入
       if (allowOutBoundedDrop) {
         const isDrop = !this.oldLayouts.find((layout) => layout.i === draggingItem.i);
-        if (isDrop && !this.isHoverFlowLayout) {
+        if (isDrop && !this.isHoverOtherLayout) {
           this.onDrop(item, itemType);
         } else {
           this.oldLayouts = cloneLayouts(layouts);
@@ -657,16 +712,16 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     } else {
       // drop on layout, but not emit onDrop
       // maybe nested layout, so trigger onDrop manual
-      !this.isHoverFlowLayout && this.onDrop(item, itemType);
+      !this.isHoverOtherLayout && this.onDrop(item, itemType);
     }
   };
 
   onResize = (item: LayoutItem, w: number, h: number, direction: string) => {
     const { layouts } = this;
-    const { cols, compactType, preventCollision, rowHeight, margin } = this.props;
+    const { cols, compactType, preventCollision } = this.props;
 
     if (['n', 's'].includes(direction) && this.engine.snapline) {
-      this.engine.snapline.reize(
+      this.engine.snapline.resize(
         { w, h },
         { positionParams: this.getPositionParams(), onResize: this.onResize }
       );
@@ -816,7 +871,6 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
       return (
         <Item
           key={l.i}
-          dragOffset
           type={this.group}
           leftSpacing={calcLeftSpacing(layouts, item)}
           data={getLayoutItem(layouts, l.i) || getLayoutItem(_layouts, l.i)}
@@ -849,6 +903,11 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
   }
 
   render() {
+    const parentContext = this.context || { groups: [], parentLayout: null };
+    const contextValue = {
+      ...parentContext,
+      parentLayout: this.getLayoutRuntimeApi(),
+    };
     const { accept } = this.state;
     const {
       style,
@@ -871,23 +930,25 @@ class Layout extends React.PureComponent<LayoutProps, LayoutStates> {
     };
 
     return (
-      <Droppable
-        weId={this.group}
-        group={this.group}
-        accept={accept}
-        scrollbarContainer={scrollbarContainer}
-        canDrop={droppable}
-        onDrop={this.onDrop}
-        onHover={this.hover}
-        onDragLeave={this.onDragLeave}
-        onDragEnter={this.onDragEnter}
-      >
-        <div ref={this.containerRef} className={clsNameStr} style={containerStyle}>
-          <Placeholder ref={this.placeholderRef} />
-          <ResizeSnapLine ref={this.snaplineRef} />
-          {this.renderItems()}
-        </div>
-      </Droppable>
+      <layoutContext.Provider value={contextValue}>
+        <Droppable
+          weId={this.group}
+          group={this.group}
+          accept={accept}
+          scrollbarContainer={scrollbarContainer}
+          canDrop={droppable}
+          onDrop={this.onDrop}
+          onHover={this.hover}
+          onDragLeave={this.onDragLeave}
+          onDragEnter={this.onDragEnter}
+        >
+          <div ref={this.containerRef} className={clsNameStr} style={containerStyle}>
+            <Placeholder ref={this.placeholderRef} />
+            <ResizeSnapLine ref={this.snaplineRef} />
+            {this.renderItems()}
+          </div>
+        </Droppable>
+      </layoutContext.Provider>
     );
   }
 }

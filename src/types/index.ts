@@ -1,8 +1,12 @@
 import React, { CSSProperties, ReactNode } from 'react';
-import { ConnectDragSource, XYCoord } from 'react-dnd';
-import { ResizeHandle } from 'react-resizable';
+import { ConnectDragSource } from 'react-dnd';
+import { ResizeCallbackData, ResizeHandle } from 'react-resizable';
 
 export type RefType = { drag: ConnectDragSource };
+export interface XYCoord {
+  x: number;
+  y: number;
+}
 export interface DragItem {
   i?: string;
   static?: boolean;
@@ -15,6 +19,7 @@ export interface LayoutItem extends DragItem {
   y: number;
   w: number;
   h: number;
+  zIndex?: number;
   minW?: number;
   maxW?: number;
   minH?: number;
@@ -22,6 +27,11 @@ export interface LayoutItem extends DragItem {
   autoHeight?: boolean;
   placeholder?: boolean;
   children?: string[];
+  /** 内部数据传递使用 */
+  extra?: {
+    el: HTMLElement;
+    dragOffset: XYCoord;
+  };
 }
 
 export interface DroppingItem {
@@ -103,11 +113,10 @@ export type Position = {
 export interface DraggableProps {
   type?: string;
   data?: DragItem;
-  /** 是否开启拖动时的偏移量计算，默认false */
-  dragOffset?: boolean;
   style?: CSSProperties;
   children?: ReactNode;
   draggable?: boolean;
+  useDragPreview?: boolean;
   connectDrag?(item: DragItem, drag: ConnectDragSource): void;
   onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;
   onDragStart?: (draggedItem: DragItem) => void;
@@ -170,18 +179,66 @@ export interface FlowLayoutProps extends React.Attributes {
   [key: string]: any;
 }
 
-export interface FlowLayoutItemProps {
+export interface FlowLayoutItemProps extends Pick<DraggableProps, 'onDragEnd'> {
   data: LayoutItem;
   type?: string;
   children?: ReactNode;
   draggable?: boolean;
   onDragStart?: (draggedItem: DragItem) => void;
   connectDrag?: (item: DragItem, drag: ConnectDragSource) => void;
-  onDragEnd?: (draggedItem: DragItem, didDrop: boolean, itemType: string) => void;
 }
 
 export interface indicatorInfo {
   el: HTMLElement | null;
   index: number;
   where: 'before' | 'after';
+}
+
+export interface PositionLayoutRef {
+  /** 上移一层：与上方相邻层交换，结果会重新归一化。 */
+  bringForward: (itemId: string) => void;
+  /** 下移一层：与下方相邻层交换，结果会重新归一化。 */
+  sendBackward: (itemId: string) => void;
+  /** 置于顶层：移动到最高层，结果会重新归一化。 */
+  bringToFront: (itemId: string) => void;
+  /** 置于底层：移动到最低层，结果会重新归一化。 */
+  sendToBack: (itemId: string) => void;
+}
+
+export interface PositionLayoutProps
+  extends Pick<FlowLayoutProps, 'layoutItem' | 'droppable' | 'empty' | 'onDragStart'> {
+  children?: ReactNode;
+  className?: string;
+  selectedItemId?: string;
+  /** 悬停前回调，返回false则阻止悬停 */
+  onBeforeHover?: (item: LayoutItem, itemType: string) => Boolean;
+  onResizeStop?: (data: LayoutItem) => void;
+  onBeforeDrop?: (draggingItem: DragItem, itemType: string, type: 'move' | 'create') => Boolean;
+  onDrop?: (
+    layoutItem: LayoutItem | null,
+    droppedItem: LayoutItem,
+    itemType: string,
+    type: 'move' | 'create'
+  ) => void;
+  /** 选中项变化时触发。 */
+  onSelect?: (item: LayoutItem | null) => void;
+  /**
+   * 层级变化回调（批量）。
+   * 返回值是“本次操作后所有受影响元素”的最新数据，zIndex 已保证为连续唯一值 1..N。
+   */
+  onZIndexChange?: (data: LayoutItem[]) => void;
+}
+
+export interface PositionLayoutItemProps extends Omit<FlowLayoutItemProps, 'connectDrag'> {
+  source: HTMLElement;
+  selected?: boolean;
+  resizeHandles?: ResizeHandle[];
+  onResize?: (
+    data: LayoutItem,
+    resizeBox: HTMLElement,
+    resizeCallbackData: ResizeCallbackData
+  ) => void;
+  onResizeStop?: (data: LayoutItem) => void;
+  onSelect?: (data: LayoutItem) => void;
+  /** 自定义调整手柄方向，默认为所有八个方向 */
 }

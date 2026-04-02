@@ -29,6 +29,10 @@ export function getWH(item: LayoutItem, positionParams: PositionParams, leftSpac
   };
 }
 
+/**
+ * 获取拖拽时的偏移量，按照鼠标拖拽时的位置来进行位置变动
+ * @returns
+ */
 export function getDragOffset() {
   const e = window.event as DragEvent;
 
